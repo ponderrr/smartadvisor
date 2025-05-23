@@ -1,41 +1,53 @@
-from typing import Union
-
-from pydantic import BaseModel
-
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+from app.core.config import settings
+from app.core.database import engine
+from app.models import *  # Import all models to register them
+from app.api.v1.api import api_router
 
-app = FastAPI()
 
-from models import User
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    # Create tables (in production, use Alembic migrations)
+    from app.core.database import Base
 
-app.post("/users/")
-def signup(user: User):
-    return user
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
-app.post("/users/")
-def signin(user: User):
-        return user
+    yield
 
-app.post("/users/")
-def signout(user: User):
-        return user
+    # Shutdown
+    await engine.dispose()
 
-app.post("/users/")
-def reset_password(user: User):
-        return user
 
-app.put("/users/")
-def reset_password(user: User):
-        return user
+# Create FastAPI app
+app = FastAPI(
+    title=settings.APP_NAME,
+    version=settings.VERSION,
+    openapi_url="/api/v1/openapi.json" if settings.DEBUG else None,
+    lifespan=lifespan,
+)
 
-app.put("/users/")
-def update_profile(user: User):
-        return user
+# Set up CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-app.get("/users/")
-def get_profile(user: User):
-        return user
+# Include API router
+app.include_router(api_router, prefix="/api/v1")
 
-app.delete("/users/")
-def delete_profile(user: User):
-        return user
+
+@app.get("/")
+async def root():
+    return {"message": "Smart Advisor API", "version": settings.VERSION}
+
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
