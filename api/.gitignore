@@ -1,21 +1,387 @@
-# Virtual Environment
-.venv
-venv
+# ==============================================
+# SMART ADVISOR BACKEND - COMPLETE .gitignore
+# ==============================================
 
-# Environment Variables
-.env
-
-# Python Cache
-__pycache__
-
-# Python Bytecode
-*.pyc
-
-# Distribution / packaging
+# Python
+# ========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
 .Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-.vscode
+# Virtual Environments
+# ========================================
+venv/
+.venv/
+env/
+.env/
+ENV/
+env.bak/
+venv.bak/
+pyvenv.cfg
 
+# Environment Variables & Secrets
+# ========================================
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.staging
+*.env
 
+# API Keys and Secrets (double protection)
+*api_key*
+*secret_key*
+*private_key*
+*.pem
+*.key
+config/secrets.py
 
+# Database Files
+# ========================================
+*.db
+*.sqlite
+*.sqlite3
+smartadvisor.db
+smartadvisor_test.db
+database.db
 
+# Database Migrations (keep structure, ignore data)
+# alembic/versions/*.py  # Uncomment this if you don't want to track migrations
+alembic.ini.bak
+
+# FastAPI & Python Web
+# ========================================
+instance/
+.webassets-cache
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# Testing
+# ========================================
+.pytest_cache/
+tests/__pycache__/
+test_results/
+test-results/
+.coverage
+coverage.xml
+htmlcov/
+.testmondata
+
+# IDEs and Editors
+# ========================================
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.vscode/*.code-workspace
+
+# PyCharm
+.idea/
+*.swp
+*.swo
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Operating System Files
+# ========================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Logs and Monitoring
+# ========================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Temporary Files
+# ========================================
+*.tmp
+*.temp
+.tmp/
+.temp/
+temp/
+tmp/
+
+# Backup Files
+# ========================================
+*.bak
+*.backup
+*.old
+*.orig
+*.save
+*~
+
+# Docker
+# ========================================
+Dockerfile.dev
+docker-compose.override.yml
+.dockerignore
+
+# Cloud & Deployment
+# ========================================
+# Railway
+.railway/
+
+# Vercel
+.vercel
+
+# Heroku
+.heroku/
+
+# AWS
+.aws/
+aws-exports.js
+
+# Google Cloud
+.gcloud/
+gcloud-service-key.json
+
+# Azure
+.azure/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# External Services Cache
+# ========================================
+# OpenAI
+.openai_cache/
+
+# TMDB
+.tmdb_cache/
+
+# Stripe
+.stripe_cache/
+
+# Redis dumps
+dump.rdb
+
+# Development Tools
+# ========================================
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Performance & Profiling
+# ========================================
+.prof
+*.prof
+.benchmarks/
+
+# Frontend Integration (if you add frontend later)
+# ========================================
+node_modules/
+.next/
+.nuxt/
+dist/
+.cache/
+.parcel-cache/
+
+# Documentation
+# ========================================
+docs/_build/
+site/
+
+# Custom Application Files
+# ========================================
+# User uploads
+uploads/
+static/uploads/
+media/
+user_files/
+
+# Generated reports
+reports/
+exports/
+
+# Cache directories
+cache/
+.cache/
+
+# Local configuration overrides
+local_settings.py
+local_config.py
+
+# SSL Certificates (local development)
+*.crt
+*.csr
+*.key
+ssl/
+
+# Database backups
+*.sql
+*.dump
+backups/
+
+# Session files
+sessions/
+.sessions/
+
+# ==============================================
+# PROJECT-SPECIFIC IGNORES
+# ==============================================
+
+# Smart Advisor specific
+recommendation_cache/
+user_avatars/
+temp_recommendations/
+
+# AI model files (if you add local models later)
+models/
+*.model
+*.pkl
+*.joblib
+
+# Analytics and metrics
+metrics/
+analytics/
+
+# Performance monitoring
+performance/
+
+# ==============================================
+# NOTES:
+# - This covers Python, FastAPI, databases, cloud deployment, and development tools
+# - Environment files are heavily protected (multiple patterns)
+# - Database files are ignored but migrations are tracked
+# - IDE settings are mostly ignored but some useful VS Code files are kept
+# - Cloud deployment files are handled for major platforms
+# ==============================================
