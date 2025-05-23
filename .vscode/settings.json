@@ -1,0 +1,6 @@
+{
+  "python.analysis.aiCodeActions": {
+    "implementAbstractClasses": true
+  },
+  "python.defaultInterpreterPath": ""
+}

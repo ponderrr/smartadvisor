@@ -1,0 +1,21 @@
+# Virtual Environment
+.venv
+venv
+
+# Environment Variables
+.env
+
+# Python Cache
+__pycache__
+
+# Python Bytecode
+*.pyc
+
+# Distribution / packaging
+.Python
+
+.vscode
+
+
+
+
