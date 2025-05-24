@@ -2,5 +2,11 @@
   "python.analysis.aiCodeActions": {
     "implementAbstractClasses": true
   },
-  "python.defaultInterpreterPath": ""
+  "python.defaultInterpreterPath": "",
+  "python.analysis.extraPaths": ["./api/app/core"],
+  
+  "editor.formatOnSave": true,
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter"
+  }
 }
