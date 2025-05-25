@@ -1,246 +1,427 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../../services/api";
+import {
+  ArrowRight,
+  ArrowLeft,
+  Sparkles,
+  Film,
+  Book,
+  Star,
+  ChevronRight,
+  Loader2,
+  RotateCcw,
+  Crown,
+  Zap,
+} from "lucide-react";
+import { useRecommendations } from "../../context/RecommendationContext";
+import { useAuth } from "../../context/AuthContext";
+import { useSubscription } from "../../context/SubscriptionContext";
 import "./QuestionsPage.css";
 
-interface Question {
-  id: number;
-  text: string;
-  type: "choice" | "rating" | "text" | "multiselect";
-  options?: string[];
-}
-
-const questions: Question[] = [
-  {
-    id: 1,
-    text: "What type of content are you interested in?",
-    type: "multiselect",
-    options: ["Movies", "TV Shows", "Books", "Audiobooks"],
-  },
-  {
-    id: 2,
-    text: "What genres do you typically enjoy?",
-    type: "multiselect",
-    options: [
-      "Action",
-      "Adventure",
-      "Comedy",
-      "Drama",
-      "Fantasy",
-      "Horror",
-      "Mystery",
-      "Romance",
-      "Sci-Fi",
-      "Thriller",
-    ],
-  },
-  {
-    id: 3,
-    text: "Name some of your favorite titles:",
-    type: "text",
-  },
-  {
-    id: 4,
-    text: "How much time do you typically spend on entertainment per week?",
-    type: "choice",
-    options: [
-      "Less than 2 hours",
-      "2-5 hours",
-      "5-10 hours",
-      "More than 10 hours",
-    ],
-  },
-  {
-    id: 5,
-    text: "Rate your interest in foreign/international content:",
-    type: "rating",
-  },
-];
+type RecommendationType = "movie" | "book" | "both";
 
 const QuestionsPage: React.FC = () => {
   const navigate = useNavigate();
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, string | string[] | number>>({});
-  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
-  const [textInput, setTextInput] = useState("");
-  const [rating, setRating] = useState(0);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const { user } = useAuth(); // Guaranteed to be authenticated due to ProtectedRoute
+  const { getMaxQuestions, isFeatureLimited, currentSubscription } =
+    useSubscription();
+  const {
+    currentSession,
+    recommendations,
+    isLoading,
+    error,
+    startRecommendationSession,
+    answerQuestion,
+    goToPreviousQuestion,
+    goToNextQuestion,
+    submitAnswers,
+    resetSession,
+    clearError,
+    getCurrentQuestion,
+    getCurrentAnswer,
+    canGoNext,
+    canGoBack,
+    getProgress,
+  } = useRecommendations();
 
-  const handleNextQuestion = useCallback(async () => {
-    const question = questions[currentQuestion];
-    let answer: string | string[] | number;
+  const [selectedType, setSelectedType] = useState<RecommendationType | null>(
+    null,
+  );
+  const [isStarting, setIsStarting] = useState(false);
 
-    switch (question.type) {
-      case "multiselect":
-        answer = selectedOptions;
-        setSelectedOptions([]); // Reset for next question
-        break;
-      case "text":
-        answer = textInput;
-        setTextInput(""); // Reset for next question
-        break;
-      case "choice":
-        answer = selectedOptions[0] || '';
-        setSelectedOptions([]); // Reset for next question
-        break;
-      case "rating":
-        answer = rating;
-        setRating(0); // Reset for next question
-        break;
-      default:
-        answer = '';
+  // Get subscription info
+  const maxQuestions = getMaxQuestions();
+  const isLimited = isFeatureLimited();
+  const planName =
+    currentSubscription?.tier === "free" ? "Free Plan" : "Premium Plan";
+
+  // Reset session when component mounts
+  useEffect(() => {
+    resetSession();
+    clearError();
+  }, [resetSession, clearError]);
+
+  // Redirect to results when recommendations are ready
+  useEffect(() => {
+    if (recommendations && currentSession.isComplete) {
+      navigate("/recommendations/results", { replace: true });
     }
+  }, [recommendations, currentSession.isComplete, navigate]);
 
-    const updatedAnswers = { ...answers, [question.id]: answer };
-    setAnswers(updatedAnswers);
+  const handleStartSession = async (type: RecommendationType) => {
+    try {
+      setIsStarting(true);
+      setSelectedType(type);
 
-    if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
-    } else {
-      setIsSubmitting(true);
-      try {
-        await api.submitQuestions(updatedAnswers);
-        navigate("/recommendations");
-      } catch (error) {
-        console.error("Error submitting answers:", error);
-        setSubmitError("Failed to submit your answers. Please try again.");
-      } finally {
-        setIsSubmitting(false);
+      // Use subscription-based question count
+      await startRecommendationSession(type, maxQuestions);
+    } catch (error) {
+      console.error("Failed to start session:", error);
+    } finally {
+      setIsStarting(false);
+    }
+  };
+
+  const handleAnswerChange = (answer: string) => {
+    answerQuestion(answer);
+  };
+
+  const handleNext = () => {
+    if (canGoNext()) {
+      const isLastQuestion =
+        currentSession.currentQuestionIndex >=
+        currentSession.questions.length - 1;
+
+      if (isLastQuestion) {
+        handleSubmit();
+      } else {
+        goToNextQuestion();
       }
     }
-  }, [currentQuestion, selectedOptions, textInput, rating, answers, navigate]);
+  };
 
-  const handlePreviousQuestion = () => {
-    if (currentQuestion > 0) {
-      setCurrentQuestion(currentQuestion - 1);
+  const handleSubmit = async () => {
+    try {
+      await submitAnswers();
+    } catch (error) {
+      console.error("Failed to submit answers:", error);
     }
   };
 
-  const handleOptionToggle = (option: string) => {
-    const question = questions[currentQuestion];
-    if (question.type === "choice") {
-      setSelectedOptions([option]);
-    } else if (question.type === "multiselect") {
-      setSelectedOptions((prev) =>
-        prev.includes(option)
-          ? prev.filter((item) => item !== option)
-          : [...prev, option]
-      );
-    }
-  };
+  const currentQuestion = getCurrentQuestion();
+  const currentAnswer = getCurrentAnswer();
+  const progress = getProgress();
+  const isLastQuestion =
+    currentSession.currentQuestionIndex >= currentSession.questions.length - 1;
 
-  const handleRatingSelect = (value: number) => {
-    setRating(value);
-  };
-
-  const renderQuestionContent = () => {
-    const question = questions[currentQuestion];
-
-    switch (question.type) {
-      case "multiselect":
-      case "choice":
-        return (
-          <div className="options-grid">
-            {question.options?.map((option) => (
-              <button
-                key={option}
-                className={`option-button ${
-                  selectedOptions.includes(option) ? "selected" : ""
-                }`}
-                onClick={() => handleOptionToggle(option)}
-              >
-                {option}
-              </button>
-            ))}
+  // Step 1: Type Selection
+  if (!currentSession.id && !isStarting) {
+    return (
+      <div className="questions-page">
+        <div className="questions-background">
+          <div className="floating-shapes">
+            <div className="shape shape-1"></div>
+            <div className="shape shape-2"></div>
+            <div className="shape shape-3"></div>
           </div>
-        );
+        </div>
 
-      case "text":
-        return (
-          <textarea
-            className="text-input"
-            value={textInput}
-            onChange={(e) => setTextInput(e.target.value)}
-            placeholder="Type your answer here..."
-            rows={4}
-          />
-        );
+        <div className="container">
+          <div className="questions-container">
+            {/* Header */}
+            <div className="questions-header">
+              <div className="header-icon glass-primary">
+                <Sparkles size={32} />
+              </div>
+              <h1 className="questions-title">
+                Get Personalized Recommendations
+              </h1>
+              <p className="questions-subtitle">
+                Our AI will ask you {maxQuestions} questions to understand your
+                preferences and suggest the perfect movies or books just for
+                you.
+              </p>
 
-      case "rating":
-        return (
-          <div className="rating-container">
-            {[1, 2, 3, 4, 5].map((value) => (
-              <button
-                key={value}
-                className={`rating-button ${rating >= value ? "active" : ""}`}
-                onClick={() => handleRatingSelect(value)}
-              >
-                {value}
-              </button>
-            ))}
+              {/* Subscription Status */}
+              <div className="subscription-status">
+                <div
+                  className={`status-badge ${currentSubscription?.tier || "free"}`}
+                >
+                  {isLimited ? (
+                    <>
+                      <Sparkles size={16} />
+                      {planName}
+                    </>
+                  ) : (
+                    <>
+                      <Crown size={16} />
+                      {planName}
+                    </>
+                  )}
+                </div>
+                <span className="status-text">
+                  {maxQuestions} questions • Enhanced AI recommendations
+                </span>
+              </div>
+            </div>
+
+            {/* Type Selection */}
+            <div className="type-selection glass">
+              <h2 className="selection-title">
+                What would you like recommendations for?
+              </h2>
+
+              {error && (
+                <div className="error-banner animate-slide-up">
+                  <span>{error}</span>
+                  <button onClick={clearError} className="error-close">
+                    ×
+                  </button>
+                </div>
+              )}
+
+              <div className="type-grid">
+                <button
+                  className="type-card"
+                  onClick={() => handleStartSession("movie")}
+                  disabled={isLoading}
+                >
+                  <div className="type-icon">
+                    <Film size={48} />
+                  </div>
+                  <h3 className="type-title">Movies</h3>
+                  <p className="type-description">
+                    Discover your next favorite film across all genres
+                  </p>
+                  <div className="type-arrow">
+                    <ChevronRight size={20} />
+                  </div>
+                </button>
+
+                <button
+                  className="type-card"
+                  onClick={() => handleStartSession("book")}
+                  disabled={isLoading}
+                >
+                  <div className="type-icon">
+                    <Book size={48} />
+                  </div>
+                  <h3 className="type-title">Books</h3>
+                  <p className="type-description">
+                    Find captivating reads tailored to your taste
+                  </p>
+                  <div className="type-arrow">
+                    <ChevronRight size={20} />
+                  </div>
+                </button>
+
+                <button
+                  className="type-card featured"
+                  onClick={() => handleStartSession("both")}
+                  disabled={isLoading}
+                >
+                  <div className="featured-badge">Popular</div>
+                  <div className="type-icon">
+                    <Star size={48} />
+                  </div>
+                  <h3 className="type-title">Both</h3>
+                  <p className="type-description">
+                    Get the best of both worlds with movies and books
+                  </p>
+                  <div className="type-arrow">
+                    <ChevronRight size={20} />
+                  </div>
+                </button>
+              </div>
+
+              {/* Upgrade Notice for Free Users */}
+              {isLimited && (
+                <div className="upgrade-notice">
+                  <div className="upgrade-content">
+                    <div className="upgrade-icon">
+                      <Crown size={24} />
+                    </div>
+                    <div className="upgrade-text">
+                      <h4>Want even better recommendations?</h4>
+                      <p>
+                        Upgrade to Premium for <strong>15 questions</strong>,
+                        enhanced AI analysis, and priority support!
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => navigate("/subscription")}
+                      className="btn-primary upgrade-btn"
+                    >
+                      <Zap size={16} />
+                      Upgrade Now
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        );
+        </div>
+      </div>
+    );
+  }
 
-      default:
-        return null;
-    }
-  };
+  // Step 2: Loading State
+  if (isStarting || (isLoading && !currentQuestion)) {
+    return (
+      <div className="questions-page">
+        <div className="questions-background">
+          <div className="floating-shapes">
+            <div className="shape shape-1"></div>
+            <div className="shape shape-2"></div>
+            <div className="shape shape-3"></div>
+          </div>
+        </div>
 
-  const isAnswerValid = () => {
-    const question = questions[currentQuestion];
-    switch (question.type) {
-      case "multiselect":
-        return selectedOptions.length > 0;
-      case "choice":
-        return selectedOptions.length === 1;
-      case "text":
-        return textInput.trim().length > 0;
-      case "rating":
-        return rating > 0;
-      default:
-        return false;
-    }
-  };
+        <div className="container">
+          <div className="loading-card glass">
+            <div className="loading-content">
+              <div className="loading-icon">
+                <Sparkles className="sparkle-icon" />
+                <Loader2 className="loader-icon" />
+              </div>
+              <h2 className="loading-title">Generating Your Questions</h2>
+              <p className="loading-description">
+                Our AI is creating personalized questions based on your
+                preferences...
+              </p>
+              <div className="loading-progress">
+                <div className="progress-bar">
+                  <div className="progress-fill"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
+  // Step 3: Questions Flow
+  if (currentQuestion) {
+    return (
+      <div className="questions-page">
+        <div className="questions-background">
+          <div className="floating-shapes">
+            <div className="shape shape-1"></div>
+            <div className="shape shape-2"></div>
+            <div className="shape shape-3"></div>
+          </div>
+        </div>
+
+        <div className="container">
+          <div className="questions-container">
+            {/* Progress Header */}
+            <div className="progress-header">
+              <button
+                onClick={resetSession}
+                className="back-to-start glass"
+                title="Start Over"
+              >
+                <RotateCcw size={20} />
+              </button>
+
+              <div className="progress-info">
+                <span className="progress-text">
+                  Question {currentSession.currentQuestionIndex + 1} of{" "}
+                  {currentSession.questions.length}
+                </span>
+                <div className="progress-bar">
+                  <div
+                    className="progress-fill"
+                    style={{ width: `${progress}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Question Card */}
+            <div className="question-card glass">
+              {error && (
+                <div className="error-banner animate-slide-up">
+                  <span>{error}</span>
+                  <button onClick={clearError} className="error-close">
+                    ×
+                  </button>
+                </div>
+              )}
+
+              <div className="question-content">
+                <div className="question-number">
+                  Question {currentSession.currentQuestionIndex + 1}
+                </div>
+                <h2 className="question-text">{currentQuestion.text}</h2>
+
+                <div className="answer-section">
+                  <textarea
+                    className="answer-input"
+                    placeholder="Type your answer here..."
+                    value={currentAnswer}
+                    onChange={(e) => handleAnswerChange(e.target.value)}
+                    rows={4}
+                    disabled={isLoading}
+                  />
+                  <div className="answer-counter">
+                    {currentAnswer.length}/500
+                  </div>
+                </div>
+              </div>
+
+              <div className="question-actions">
+                <button
+                  onClick={goToPreviousQuestion}
+                  className="btn-glass"
+                  disabled={!canGoBack() || isLoading}
+                >
+                  <ArrowLeft size={20} />
+                  Previous
+                </button>
+
+                <button
+                  onClick={handleNext}
+                  className="btn-primary"
+                  disabled={!canGoNext() || isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 size={20} className="loading-spinner" />
+                      {isLastQuestion ? "Generating..." : "Processing..."}
+                    </>
+                  ) : (
+                    <>
+                      {isLastQuestion ? "Get Recommendations" : "Next"}
+                      <ArrowRight size={20} />
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Tips */}
+            <div className="question-tips">
+              <p>
+                💡 <strong>Tip:</strong> Be as specific as possible to get
+                better recommendations!
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback loading state
   return (
-    <div className="page-container questions-page">
+    <div className="questions-page">
       <div className="container">
-        <div className="questions-card">
-          <div className="progress-bar">
-            <div
-              className="progress"
-              style={{
-                width: `${((currentQuestion + 1) / questions.length) * 100}%`,
-              }}
-            />
-          </div>
-
-          <div className="question-content">
-            <h2 className="question-number">
-              Question {currentQuestion + 1} of {questions.length}
-            </h2>
-            <h3 className="question-text">{questions[currentQuestion].text}</h3>
-
-            {renderQuestionContent()}
-          </div>
-
-          <div className="question-actions">
-            {submitError && <div className="error-message">{submitError}</div>}
-            <button
-              className="btn-secondary"
-              onClick={handlePreviousQuestion}
-              disabled={currentQuestion === 0 || isLoading}
-            >
-              Previous
-            </button>
-            <button
-              className="btn-primary"
-              onClick={handleNextQuestion}
-              disabled={!isAnswerValid() || isSubmitting}
-            >
-              {isSubmitting ? "Submitting..." : currentQuestion === questions.length - 1 ? "Finish" : "Next"}
-            </button>
+        <div className="loading-card glass">
+          <div className="loading-content">
+            <Loader2 className="loading-icon" />
+            <h2 className="loading-title">Loading...</h2>
           </div>
         </div>
       </div>
