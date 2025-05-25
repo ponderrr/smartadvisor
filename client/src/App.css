@@ -1,0 +1,42 @@
+:root {
+  --primary-color: #10b77f;
+  --primary-color-dark: #0e9e6e;
+  --primary-color-light: #d1f7e9;
+  --bg-gradient-from: #f8fafc;
+  --bg-gradient-to: #f1f5f9;
+}
+
+.App {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(
+    135deg,
+    var(--bg-gradient-from) 0%,
+    var(--bg-gradient-to) 100%
+  );
+}
+
+/* Dark mode overrides */
+:root.dark {
+  --bg-gradient-from: #1f2937;
+  --bg-gradient-to: #111827;
+}
+
+::selection {
+  background-color: var(--primary-color-light);
+  color: var(--primary-color);
+}
+
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: 0 0.5rem;
+  }
+}
