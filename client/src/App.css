@@ -1,42 +1,102 @@
 :root {
-  --primary-color: #10b77f;
-  --primary-color-dark: #0e9e6e;
-  --primary-color-light: #d1f7e9;
-  --bg-gradient-from: #f8fafc;
-  --bg-gradient-to: #f1f5f9;
+  /* Colors */
+  --primary-gradient: linear-gradient(to right, #059669, #16a34a);
+  --primary-gradient-hover: linear-gradient(to right, #047857, #15803d);
+  --background-gradient: linear-gradient(135deg, #0f172a 0%, #064e3b 50%, #1e293b 100%);
+  --text-primary: #ffffff;
+  --text-secondary: #9ca3af;
+  --text-accent: #6ee7b7;
+  --text-accent-hover: #a7f3d0;
+  --overlay-light: rgba(255, 255, 255, 0.05);
+  --overlay-border: rgba(255, 255, 255, 0.1);
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  
+  /* Transitions */
+  --transition-default: all 0.2s ease;
 }
 
 .App {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(
-    135deg,
-    var(--bg-gradient-from) 0%,
-    var(--bg-gradient-to) 100%
-  );
-}
-
-/* Dark mode overrides */
-:root.dark {
-  --bg-gradient-from: #1f2937;
-  --bg-gradient-to: #111827;
+  background: var(--background-gradient);
+  color: var(--text-primary);
 }
 
 ::selection {
-  background-color: var(--primary-color-light);
-  color: var(--primary-color);
+  background-color: var(--text-accent);
+  color: var(--text-primary);
+}
+
+/* Glass Card */
+.glass-card {
+  background: var(--overlay-light);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--overlay-border);
+  border-radius: 1rem;
+  padding: 2rem;
+  transition: var(--transition-default);
 }
 
 .container {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto;
   padding: 0 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+.content-wrapper {
+  padding: 2rem 0;
 }
 
 @media (max-width: 640px) {
   .container {
     padding: 0 0.5rem;
   }
+  
+  .content-wrapper {
+    padding: 1rem 0;
+  }
+}
+
+/* Background Effects */
+.background-effects {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bg-circle-1,
+.bg-circle-2 {
+  position: absolute;
+  width: 24rem;
+  height: 24rem;
+  border-radius: 50%;
+  filter: blur(48px);
+  animation: pulse 2s infinite;
+}
+
+.bg-circle-1 {
+  top: 25%;
+  left: 25%;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.bg-circle-2 {
+  bottom: 25%;
+  right: 25%;
+  background: rgba(34, 197, 94, 0.1);
+  animation-delay: 1s;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
