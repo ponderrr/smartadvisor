@@ -25,7 +25,7 @@ httpx==0.25.2
 
 # External service integrations
 openai==1.3.7
-stripe==7.8.0
+stripe==7.7.0
 
 # Retry logic for external APIs
 tenacity==8.2.3
