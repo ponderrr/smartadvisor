@@ -1,9 +1,11 @@
-import React, { createContext, useState, useContext, ReactNode } from "react";
+// client/src/context/RecommendationContext.tsx
+import React, { createContext, useState, useContext, useCallback } from "react";
+import type { ReactNode } from "react";
 import api, {
-  Question,
-  Answer,
-  RecommendationResponse,
-  QuestionGenerationRequest,
+  type Question,
+  type Answer,
+  type RecommendationResponse,
+  type QuestionGenerationRequest,
 } from "../services/api";
 
 interface RecommendationState {
@@ -28,15 +30,21 @@ interface RecommendationState {
 interface RecommendationContextType extends RecommendationState {
   startRecommendationSession: (
     type: "movie" | "book" | "both",
-    numQuestions?: number,
+    numQuestions?: number
   ) => Promise<void>;
   answerQuestion: (answer: string) => void;
   goToPreviousQuestion: () => void;
+  goToNextQuestion: () => void;
   submitAnswers: () => Promise<void>;
   loadRecommendation: (recommendationId: string) => Promise<void>;
   loadRecommendationHistory: () => Promise<void>;
   resetSession: () => void;
   clearError: () => void;
+  getCurrentQuestion: () => Question | null;
+  getCurrentAnswer: () => string;
+  canGoNext: () => boolean;
+  canGoBack: () => boolean;
+  getProgress: () => number;
 }
 
 const RecommendationContext = createContext<
@@ -65,56 +73,66 @@ export const RecommendationProvider: React.FC<RecommendationProviderProps> = ({
     error: null,
   });
 
-  const setLoading = (isLoading: boolean) => {
+  const setLoading = useCallback((isLoading: boolean) => {
     setState((prev) => ({ ...prev, isLoading }));
-  };
+  }, []);
 
-  const setError = (error: string | null) => {
+  const setError = useCallback((error: string | null) => {
     setState((prev) => ({ ...prev, error }));
-  };
+  }, []);
 
-  const clearError = () => {
+  const clearError = useCallback(() => {
     setError(null);
-  };
+  }, [setError]);
 
-  const startRecommendationSession = async (
-    type: "movie" | "book" | "both",
-    numQuestions: number = 5,
-  ): Promise<void> => {
-    try {
-      setLoading(true);
-      setError(null);
+  const startRecommendationSession = useCallback(
+    async (
+      type: "movie" | "book" | "both",
+      numQuestions: number = 5
+    ): Promise<void> => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      const request: QuestionGenerationRequest = {
-        type,
-        num_questions: numQuestions,
-      };
-
-      const response = await api.generateQuestions(request);
-
-      setState((prev) => ({
-        ...prev,
-        currentSession: {
-          id: response.recommendation_id,
+        const request: QuestionGenerationRequest = {
           type,
-          questions: response.questions,
-          currentQuestionIndex: 0,
-          answers: [],
-          isComplete: false,
-        },
-        recommendations: null,
-      }));
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to generate questions";
-      setError(errorMessage);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
+          num_questions: numQuestions,
+        };
 
-  const answerQuestion = (answer: string) => {
+        console.log("Starting recommendation session with:", request);
+
+        const response = await api.generateQuestions(request);
+
+        console.log("Generated questions response:", response);
+
+        setState((prev) => ({
+          ...prev,
+          currentSession: {
+            id: response.recommendation_id,
+            type,
+            questions: response.questions,
+            currentQuestionIndex: 0,
+            answers: [],
+            isComplete: false,
+          },
+          recommendations: null,
+          isLoading: false,
+        }));
+      } catch (error) {
+        console.error("Error starting recommendation session:", error);
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Failed to generate questions";
+        setError(errorMessage);
+        setLoading(false);
+        throw error;
+      }
+    },
+    [setLoading, setError]
+  );
+
+  const answerQuestion = useCallback((answer: string) => {
     setState((prev) => {
       const currentQuestion =
         prev.currentSession.questions[prev.currentSession.currentQuestionIndex];
@@ -127,7 +145,7 @@ export const RecommendationProvider: React.FC<RecommendationProviderProps> = ({
 
       // Update or add answer for current question
       const updatedAnswers = prev.currentSession.answers.filter(
-        (a) => a.question_id !== currentQuestion.id,
+        (a) => a.question_id !== currentQuestion.id
       );
       updatedAnswers.push(newAnswer);
 
@@ -139,22 +157,22 @@ export const RecommendationProvider: React.FC<RecommendationProviderProps> = ({
         },
       };
     });
-  };
+  }, []);
 
-  const goToPreviousQuestion = () => {
+  const goToPreviousQuestion = useCallback(() => {
     setState((prev) => ({
       ...prev,
       currentSession: {
         ...prev.currentSession,
         currentQuestionIndex: Math.max(
           0,
-          prev.currentSession.currentQuestionIndex - 1,
+          prev.currentSession.currentQuestionIndex - 1
         ),
       },
     }));
-  };
+  }, []);
 
-  const goToNextQuestion = () => {
+  const goToNextQuestion = useCallback(() => {
     setState((prev) => {
       const nextIndex = prev.currentSession.currentQuestionIndex + 1;
       const isComplete = nextIndex >= prev.currentSession.questions.length;
@@ -168,9 +186,9 @@ export const RecommendationProvider: React.FC<RecommendationProviderProps> = ({
         },
       };
     });
-  };
+  }, []);
 
-  const submitAnswers = async (): Promise<void> => {
+  const submitAnswers = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
@@ -179,10 +197,17 @@ export const RecommendationProvider: React.FC<RecommendationProviderProps> = ({
         throw new Error("No active recommendation session");
       }
 
+      console.log("Submitting answers:", {
+        sessionId: state.currentSession.id,
+        answers: state.currentSession.answers,
+      });
+
       const recommendations = await api.submitAnswers(
         state.currentSession.id,
-        state.currentSession.answers,
+        state.currentSession.answers
       );
+
+      console.log("Received recommendations:", recommendations);
 
       setState((prev) => ({
         ...prev,
@@ -191,51 +216,58 @@ export const RecommendationProvider: React.FC<RecommendationProviderProps> = ({
           ...prev.currentSession,
           isComplete: true,
         },
+        isLoading: false,
       }));
     } catch (error) {
+      console.error("Error submitting answers:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Failed to submit answers";
       setError(errorMessage);
-      throw error;
-    } finally {
       setLoading(false);
-    }
-  };
-
-  const loadRecommendation = async (
-    recommendationId: string,
-  ): Promise<void> => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const recommendations = await api.getRecommendation(recommendationId);
-
-      setState((prev) => ({
-        ...prev,
-        recommendations,
-        currentSession: {
-          id: recommendationId,
-          type: recommendations.type,
-          questions: recommendations.questions,
-          currentQuestionIndex: recommendations.questions.length,
-          answers: [], // We don't get the original answers back
-          isComplete: true,
-        },
-      }));
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to load recommendation";
-      setError(errorMessage);
       throw error;
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [
+    state.currentSession.id,
+    state.currentSession.answers,
+    setLoading,
+    setError,
+  ]);
 
-  const loadRecommendationHistory = async (): Promise<void> => {
+  const loadRecommendation = useCallback(
+    async (recommendationId: string): Promise<void> => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const recommendations = await api.getRecommendation(recommendationId);
+
+        setState((prev) => ({
+          ...prev,
+          recommendations,
+          currentSession: {
+            id: recommendationId,
+            type: recommendations.type,
+            questions: recommendations.questions,
+            currentQuestionIndex: recommendations.questions.length,
+            answers: [], // We don't get the original answers back
+            isComplete: true,
+          },
+          isLoading: false,
+        }));
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Failed to load recommendation";
+        setError(errorMessage);
+        setLoading(false);
+        throw error;
+      }
+    },
+    [setLoading, setError]
+  );
+
+  const loadRecommendationHistory = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
@@ -245,6 +277,7 @@ export const RecommendationProvider: React.FC<RecommendationProviderProps> = ({
       setState((prev) => ({
         ...prev,
         history: response.items,
+        isLoading: false,
       }));
     } catch (error) {
       const errorMessage =
@@ -252,13 +285,12 @@ export const RecommendationProvider: React.FC<RecommendationProviderProps> = ({
           ? error.message
           : "Failed to load recommendation history";
       setError(errorMessage);
-      // Don't throw here as this is often called in background
-    } finally {
       setLoading(false);
+      // Don't throw here as this is often called in background
     }
-  };
+  }, [setLoading, setError]);
 
-  const resetSession = () => {
+  const resetSession = useCallback(() => {
     setState((prev) => ({
       ...prev,
       currentSession: {
@@ -272,62 +304,60 @@ export const RecommendationProvider: React.FC<RecommendationProviderProps> = ({
       recommendations: null,
       error: null,
     }));
-  };
+  }, []);
 
   // Helper functions for the context
-  const getCurrentQuestion = (): Question | null => {
+  const getCurrentQuestion = useCallback((): Question | null => {
     const { questions, currentQuestionIndex } = state.currentSession;
     return questions[currentQuestionIndex] || null;
-  };
+  }, [state.currentSession]);
 
-  const getCurrentAnswer = (): string => {
+  const getCurrentAnswer = useCallback((): string => {
     const currentQuestion = getCurrentQuestion();
     if (!currentQuestion) return "";
 
     const answer = state.currentSession.answers.find(
-      (a) => a.question_id === currentQuestion.id,
+      (a) => a.question_id === currentQuestion.id
     );
     return answer?.answer_text || "";
-  };
+  }, [getCurrentQuestion, state.currentSession.answers]);
 
-  const canGoNext = (): boolean => {
+  const canGoNext = useCallback((): boolean => {
     const currentQuestion = getCurrentQuestion();
     if (!currentQuestion) return false;
 
     const hasAnswer = state.currentSession.answers.some(
-      (a) => a.question_id === currentQuestion.id && a.answer_text.trim(),
+      (a) => a.question_id === currentQuestion.id && a.answer_text.trim()
     );
     return hasAnswer;
-  };
+  }, [getCurrentQuestion, state.currentSession.answers]);
 
-  const canGoBack = (): boolean => {
+  const canGoBack = useCallback((): boolean => {
     return state.currentSession.currentQuestionIndex > 0;
-  };
+  }, [state.currentSession.currentQuestionIndex]);
 
-  const getProgress = (): number => {
+  const getProgress = useCallback((): number => {
     const total = state.currentSession.questions.length;
     const current = state.currentSession.currentQuestionIndex;
     return total > 0 ? (current / total) * 100 : 0;
-  };
+  }, [state.currentSession]);
 
   const contextValue: RecommendationContextType = {
     ...state,
     startRecommendationSession,
     answerQuestion,
     goToPreviousQuestion,
+    goToNextQuestion,
     submitAnswers,
     loadRecommendation,
     loadRecommendationHistory,
     resetSession,
     clearError,
-
-    // Helper methods (add these to the interface above)
     getCurrentQuestion,
     getCurrentAnswer,
     canGoNext,
     canGoBack,
     getProgress,
-    goToNextQuestion,
   };
 
   return (
@@ -341,7 +371,7 @@ export const useRecommendations = (): RecommendationContextType => {
   const context = useContext(RecommendationContext);
   if (context === undefined) {
     throw new Error(
-      "useRecommendations must be used within a RecommendationProvider",
+      "useRecommendations must be used within a RecommendationProvider"
     );
   }
   return context;

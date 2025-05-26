@@ -1,3 +1,4 @@
+// client/src/App.tsx
 import React from "react";
 import {
   BrowserRouter as Router,
@@ -18,7 +19,7 @@ import AccountPage from "./pages/AccountPage/AccountPage";
 import QuestionsPage from "./pages/QuestionsPage/QuestionsPage";
 import RecommendationsResults from "./pages/RecommendationsResults/RecommendationsResults";
 import SubscriptionPage from "./pages/SubscriptionPage/SubscriptionPage";
-import Navbar from "./components/layout/Navbar";
+import Navbar from "./components/layout/Navbar/Navbar";
 
 // Enhanced Loading Component
 const LoadingScreen: React.FC = () => (
@@ -55,7 +56,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   if (!requireAuth && isAuthenticated) {
     // Redirect authenticated users away from auth pages
-    return <Navigate to="/" replace />;
+    const from = (location.state as any)?.from?.pathname || "/";
+    return <Navigate to={from} replace />;
   }
 
   return <>{children}</>;
@@ -146,7 +148,7 @@ function App() {
   React.useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
     const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)",
+      "(prefers-color-scheme: dark)"
     ).matches;
 
     if (savedTheme === "dark" || (!savedTheme && prefersDark)) {

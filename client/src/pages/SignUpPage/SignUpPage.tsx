@@ -110,7 +110,7 @@ const SignUpPage: React.FC = () => {
     }));
 
     // Clear validation error when user starts typing
-    if (validationErrors[name]) {
+    if (name in validationErrors) {
       setValidationErrors((prev) => ({
         ...prev,
         [name]: undefined,
@@ -135,7 +135,7 @@ const SignUpPage: React.FC = () => {
 
   // Password strength indicator
   const getPasswordStrength = (
-    password: string,
+    password: string
   ): { score: number; label: string; color: string } => {
     if (!password) return { score: 0, label: "", color: "" };
 
@@ -208,7 +208,9 @@ const SignUpPage: React.FC = () => {
                   type="email"
                   id="email"
                   name="email"
-                  className={`input ${validationErrors.email ? "input-error" : ""}`}
+                  className={`input ${
+                    validationErrors.email ? "input-error" : ""
+                  }`}
                   placeholder="your.email@example.com"
                   value={formData.email}
                   onChange={handleInputChange}
@@ -231,7 +233,9 @@ const SignUpPage: React.FC = () => {
                   type="text"
                   id="username"
                   name="username"
-                  className={`input ${validationErrors.username ? "input-error" : ""}`}
+                  className={`input ${
+                    validationErrors.username ? "input-error" : ""
+                  }`}
                   placeholder="Choose a username"
                   value={formData.username}
                   onChange={handleInputChange}
@@ -254,7 +258,9 @@ const SignUpPage: React.FC = () => {
                   type="number"
                   id="age"
                   name="age"
-                  className={`input ${validationErrors.age ? "input-error" : ""}`}
+                  className={`input ${
+                    validationErrors.age ? "input-error" : ""
+                  }`}
                   placeholder="Your age"
                   value={formData.age}
                   onChange={handleInputChange}
@@ -279,7 +285,9 @@ const SignUpPage: React.FC = () => {
                   type={showPassword ? "text" : "password"}
                   id="password"
                   name="password"
-                  className={`input ${validationErrors.password ? "input-error" : ""}`}
+                  className={`input ${
+                    validationErrors.password ? "input-error" : ""
+                  }`}
                   placeholder="Create a strong password"
                   value={formData.password}
                   onChange={handleInputChange}
@@ -332,7 +340,9 @@ const SignUpPage: React.FC = () => {
                   type={showConfirmPassword ? "text" : "password"}
                   id="confirmPassword"
                   name="confirmPassword"
-                  className={`input ${validationErrors.confirmPassword ? "input-error" : ""}`}
+                  className={`input ${
+                    validationErrors.confirmPassword ? "input-error" : ""
+                  }`}
                   placeholder="Confirm your password"
                   value={formData.confirmPassword}
                   onChange={handleInputChange}

@@ -9,7 +9,6 @@ import {
   Lock,
   Shield,
 } from "lucide-react";
-import api from "../../../services/api";
 
 interface SecurityData {
   currentPassword: string;

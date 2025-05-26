@@ -3,10 +3,11 @@ import React, {
   useState,
   useContext,
   useEffect,
-  ReactNode,
 } from "react";
+import type { ReactNode } from "react";
 import { useAuth } from "./AuthContext";
-import api, { SubscriptionPlan, SubscriptionStatus } from "../services/api";
+import api from "../services/api";
+import type { SubscriptionPlan, SubscriptionStatus } from "../services/api";
 
 interface SubscriptionState {
   currentSubscription: SubscriptionStatus | null;
@@ -27,6 +28,12 @@ interface SubscriptionContextType extends SubscriptionState {
   getMaxQuestions: () => number;
   hasFeature: (feature: string) => boolean;
   isFeatureLimited: () => boolean;
+
+  // Additional helper methods
+  getPlanByTier: (tier: string) => SubscriptionPlan | undefined;
+  getCurrentPlan: () => SubscriptionPlan | undefined;
+  getUpgradePlans: () => SubscriptionPlan[];
+  getSubscriptionStatusText: () => string;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(
@@ -242,7 +249,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
   const getSubscriptionStatusText = (): string => {
     if (!state.currentSubscription) return "No active subscription";
 
-    const { status, tier, cancel_at_period_end, current_period_end } =
+    const { status, cancel_at_period_end, current_period_end } =
       state.currentSubscription;
 
     if (cancel_at_period_end && current_period_end) {

@@ -1,11 +1,14 @@
+// client/src/context/AuthContext.tsx
 import React, {
   createContext,
   useState,
   useContext,
   useEffect,
-  ReactNode,
+  useCallback,
 } from "react";
-import api, { User } from "../services/api";
+import type { ReactNode } from "react";
+import api from "../services/api";
+import type { User } from "../services/api";
 
 interface AuthState {
   user: User | null;
@@ -41,48 +44,60 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     error: null,
   });
 
-  const setLoading = (isLoading: boolean) => {
+  const setLoading = useCallback((isLoading: boolean) => {
     setState((prev) => ({ ...prev, isLoading }));
-  };
+  }, []);
 
-  const setError = (error: string | null) => {
+  const setError = useCallback((error: string | null) => {
     setState((prev) => ({ ...prev, error }));
-  };
+  }, []);
 
-  const setUser = (user: User | null) => {
+  const setUser = useCallback((user: User | null) => {
     setState((prev) => ({
       ...prev,
       user,
       isAuthenticated: !!user,
       error: null,
     }));
-  };
+  }, []);
 
-  const clearError = () => {
+  const clearError = useCallback(() => {
     setError(null);
-  };
+  }, [setError]);
 
   // Initialize auth state on app load
   useEffect(() => {
+    let mounted = true;
+
     const initializeAuth = async () => {
       try {
         if (api.isAuthenticated) {
           const user = await api.getCurrentUser();
-          setUser(user);
+          if (mounted) {
+            setUser(user);
+          }
         }
       } catch (error) {
         console.error("Auth initialization failed:", error);
         // Clear potentially invalid tokens
-        await api.logout();
+        if (mounted) {
+          await api.logout();
+        }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
     initializeAuth();
-  }, []);
 
-  const login = async (email: string, password: string): Promise<void> => {
+    return () => {
+      mounted = false;
+    };
+  }, []); // Remove setUser and setLoading from dependencies to prevent loops
+
+  const login = useCallback(async (email: string, password: string): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
@@ -97,9 +112,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [setLoading, setError, setUser]);
 
-  const register = async (
+  const register = useCallback(async (
     email: string,
     username: string,
     password: string,
@@ -122,9 +137,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [setLoading, setError, setUser]);
 
-  const logout = async (): Promise<void> => {
+  const logout = useCallback(async (): Promise<void> => {
     try {
       await api.logout();
     } catch (error) {
@@ -133,9 +148,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setUser(null);
     }
-  };
+  }, [setUser]);
 
-  const refreshUser = async (): Promise<void> => {
+  const refreshUser = useCallback(async (): Promise<void> => {
     try {
       if (api.isAuthenticated) {
         const user = await api.getCurrentUser();
@@ -146,7 +161,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setError("Session expired. Please log in again.");
       await logout();
     }
-  };
+  }, [setUser, setError, logout]);
 
   const contextValue: AuthContextType = {
     ...state,
