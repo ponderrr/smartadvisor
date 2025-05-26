@@ -22,7 +22,7 @@ type RecommendationType = "movie" | "book" | "both";
 
 const QuestionsPage: React.FC = () => {
   const navigate = useNavigate();
-  useAuth();
+  const { isAuthenticated } = useAuth();
   const { getMaxQuestions, isFeatureLimited, currentSubscription } =
     useSubscription();
   const {
@@ -45,6 +45,7 @@ const QuestionsPage: React.FC = () => {
   } = useRecommendations();
 
   const [isStarting, setIsStarting] = useState(false);
+  // Remove the unused setSelectedType function - we don't need it
 
   // Get subscription info
   const maxQuestions = getMaxQuestions();
@@ -66,14 +67,27 @@ const QuestionsPage: React.FC = () => {
   }, [recommendations, currentSession.isComplete, navigate]);
 
   const handleStartSession = async (type: RecommendationType) => {
+    if (!isAuthenticated) {
+      navigate("/signin?redirect=/questions");
+      return;
+    }
+
     try {
       setIsStarting(true);
-      setSelectedType(type);
+      clearError();
+
+      console.log(
+        "Starting session with type:",
+        type,
+        "and questions:",
+        maxQuestions
+      );
 
       // Use subscription-based question count
       await startRecommendationSession(type, maxQuestions);
     } catch (error) {
       console.error("Failed to start session:", error);
+      // Error is already handled by the context
     } finally {
       setIsStarting(false);
     }
@@ -427,9 +441,5 @@ const QuestionsPage: React.FC = () => {
     </div>
   );
 };
-
-function setSelectedType(_type: string) {
-  throw new Error("Function not implemented.");
-}
 
 export default QuestionsPage;
