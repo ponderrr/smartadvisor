@@ -1,14 +1,22 @@
-from typing import AsyncGenerator, Optional
+from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
-from app.core.security import verify_token, AuthenticationError
+from app.core.security import verify_token
 from app.crud.user import user_crud
 from app.models.user import User
 
-# Security scheme
 security = HTTPBearer()
+
+
+class AuthenticationError(HTTPException):
+    def __init__(self, detail: str = "Could not validate credentials"):
+        super().__init__(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=detail,
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 
 async def get_current_user(
@@ -45,7 +53,7 @@ async def get_current_active_user(
     return current_user
 
 
-def get_current_user_optional(
+async def get_current_user_optional(
     db: AsyncSession = Depends(get_db),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ) -> Optional[User]:
@@ -54,6 +62,16 @@ def get_current_user_optional(
         return None
 
     try:
-        return get_current_user(db, credentials)
-    except:
+        token = credentials.credentials
+        user_id = verify_token(token, "access")
+
+        if user_id is None:
+            return None
+
+        user = await user_crud.get(db, id=user_id)
+        if user is None or not user.is_active:
+            return None
+
+        return user
+    except Exception:
         return None
