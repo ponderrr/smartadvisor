@@ -2,6 +2,13 @@
 import axios from "axios";
 import type { AxiosError, AxiosInstance } from "axios";
 
+// Extend AxiosRequestConfig to include _retry
+declare module 'axios' {
+  interface InternalAxiosRequestConfig {
+    _retry?: boolean;
+  }
+}
+
 // Backend API Response Types
 interface ApiResponse<T> {
   data?: T;
@@ -117,6 +124,8 @@ interface SubscriptionStatus {
 class ApiService {
   private api: AxiosInstance;
   private authTokens: AuthTokens | null = null;
+  private isRefreshing = false;
+  private refreshPromise: Promise<AuthTokens> | null = null;
 
   constructor(baseURL: string) {
     this.api = axios.create({
@@ -149,22 +158,46 @@ class ApiService {
       async (error: AxiosError) => {
         const originalRequest = error.config;
 
+        // Check if this is a 401 error and we have a refresh token
         if (
           error.response?.status === 401 &&
           this.authTokens?.refresh_token &&
-          originalRequest
+          originalRequest &&
+          !originalRequest._retry && // Prevent infinite loops
+          !this.isRefreshTokenExpired() // Don't try if refresh token is expired
         ) {
+          // Mark this request as a retry
+          originalRequest._retry = true;
+
           try {
-            const newTokens = await this.refreshToken(
+            // If we're already refreshing, wait for that to complete
+            if (this.isRefreshing && this.refreshPromise) {
+              const newTokens = await this.refreshPromise;
+              originalRequest.headers.Authorization = `Bearer ${newTokens.access_token}`;
+              return this.api(originalRequest);
+            }
+
+            // Start refresh process
+            console.log("🔄 Starting token refresh...");
+            this.isRefreshing = true;
+            this.refreshPromise = this.refreshToken(
               this.authTokens.refresh_token
             );
+
+            const newTokens = await this.refreshPromise;
             this.setAuthTokens(newTokens);
+
+            // Retry the original request with new token
             originalRequest.headers.Authorization = `Bearer ${newTokens.access_token}`;
             return this.api(originalRequest);
           } catch (refreshError) {
+            console.error("🔄 Token refresh failed:", refreshError);
+            // Clear tokens and let auth context handle the redirect
             this.clearAuthTokens();
-            window.location.href = "/signin";
             throw refreshError;
+          } finally {
+            this.isRefreshing = false;
+            this.refreshPromise = null;
           }
         }
 
@@ -174,66 +207,118 @@ class ApiService {
   }
 
   private loadStoredTokens() {
-    const storedTokens = localStorage.getItem("auth_tokens");
-    if (storedTokens) {
-      try {
-        this.authTokens = JSON.parse(storedTokens);
-      } catch (error) {
-        console.error("Failed to parse stored tokens:", error);
-        localStorage.removeItem("auth_tokens");
+    try {
+      const storedTokens = localStorage.getItem("auth_tokens");
+      if (storedTokens) {
+        const tokens = JSON.parse(storedTokens);
+        // Basic validation of token structure
+        if (tokens.access_token && tokens.refresh_token && tokens.token_type) {
+          this.authTokens = tokens;
+          console.log("📱 Loaded stored tokens");
+        } else {
+          console.warn("🚫 Invalid token structure, clearing storage");
+          localStorage.removeItem("auth_tokens");
+        }
       }
+    } catch (error) {
+      console.error("Failed to parse stored tokens:", error);
+      localStorage.removeItem("auth_tokens");
     }
   }
 
   private setAuthTokens(tokens: AuthTokens) {
     this.authTokens = tokens;
     localStorage.setItem("auth_tokens", JSON.stringify(tokens));
+    console.log("💾 Tokens stored successfully");
   }
 
   private clearAuthTokens() {
     this.authTokens = null;
     localStorage.removeItem("auth_tokens");
+    console.log("🗑️ Tokens cleared");
+  }
+
+  private isRefreshTokenExpired(): boolean {
+    if (!this.authTokens?.refresh_token) return true;
+
+    try {
+      const payload = JSON.parse(
+        atob(this.authTokens.refresh_token.split(".")[1])
+      );
+      const isExpired = payload.exp * 1000 < Date.now();
+      if (isExpired) {
+        console.log("⏰ Refresh token is expired");
+      }
+      return isExpired;
+    } catch {
+      console.log("🚫 Invalid refresh token format");
+      return true;
+    }
   }
 
   private async refreshToken(refreshToken: string): Promise<AuthTokens> {
-    const response = await this.api.post<AuthTokens>("/auth/refresh", {
+    console.log("🔄 Attempting to refresh access token");
+
+    // Create a new axios instance without interceptors for refresh
+    const refreshApi = axios.create({
+      baseURL: this.api.defaults.baseURL,
+      timeout: 10000,
+    });
+
+    const response = await refreshApi.post<AuthTokens>("/auth/refresh", {
       refresh_token: refreshToken,
     });
+
+    console.log("✅ Token refresh successful");
     return response.data;
   }
 
   private handleError(error: AxiosError): Error {
     if (error.response?.data) {
       const apiError = error.response.data as ApiResponse<any>;
-      return new Error(
-        apiError.detail || apiError.message || "An error occurred"
-      );
+      const message =
+        apiError.detail || apiError.message || "An error occurred";
+      console.error("🚫 API Error:", message);
+      return new Error(message);
     } else if (error.request) {
+      console.error("🌐 Network Error:", error.message);
       return new Error("Network error - please check your connection");
     } else {
+      console.error("❌ Request Error:", error.message);
       return new Error("Request failed");
     }
   }
 
   // Authentication methods
   async login(credentials: LoginCredentials): Promise<User> {
+    console.log("🔐 API: Attempting login");
     const response = await this.api.post<AuthTokens>(
       "/auth/login",
       credentials
     );
     this.setAuthTokens(response.data);
+
     const userResponse = await this.getCurrentUser();
+    console.log("✅ API: Login successful");
     return userResponse;
   }
 
   async register(data: RegisterData): Promise<User> {
+    console.log("📝 API: Attempting registration");
     const response = await this.api.post<User>("/auth/register", data);
+    console.log("✅ API: Registration successful");
     return response.data;
   }
 
   async logout(): Promise<void> {
     try {
-      await this.api.post("/auth/logout");
+      console.log("👋 API: Logging out");
+      if (this.authTokens) {
+        await this.api.post("/auth/logout");
+      }
+    } catch (error) {
+      console.error("Logout API call failed:", error);
+      // Continue with cleanup even if API call fails
     } finally {
       this.clearAuthTokens();
     }
@@ -250,9 +335,6 @@ class ApiService {
   }
 
   // Recommendation methods
-  // Enhanced generateQuestions method for debugging
-  // Add this to your api.ts file in the ApiService class
-
   async generateQuestions(request: QuestionGenerationRequest): Promise<{
     recommendation_id: string;
     questions: Question[];
@@ -390,7 +472,7 @@ class ApiService {
 
   // Utility methods
   get isAuthenticated(): boolean {
-    return !!this.authTokens?.access_token;
+    return !!(this.authTokens?.access_token && this.authTokens?.refresh_token);
   }
 
   get currentUser(): User | null {

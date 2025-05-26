@@ -23,7 +23,7 @@ interface AuthContextType extends AuthState {
     email: string,
     username: string,
     password: string,
-    age?: number,
+    age?: number
   ) => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
@@ -35,6 +35,17 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 interface AuthProviderProps {
   children: ReactNode;
 }
+
+// Helper function to validate token without making API calls
+const isTokenValid = (tokenString: string): boolean => {
+  try {
+    const payload = JSON.parse(atob(tokenString.split(".")[1]));
+    const isExpired = payload.exp * 1000 < Date.now();
+    return !isExpired;
+  } catch {
+    return false;
+  }
+};
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [state, setState] = useState<AuthState>({
@@ -71,17 +82,91 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const initializeAuth = async () => {
       try {
-        if (api.isAuthenticated) {
+        console.log("🔐 Initializing auth state...");
+
+        // First, check if we have tokens at all
+        const storedTokens = localStorage.getItem("auth_tokens");
+        if (!storedTokens) {
+          console.log("📝 No stored tokens found - user not authenticated");
+          if (mounted) {
+            setLoading(false);
+          }
+          return;
+        }
+
+        // Parse and validate token structure
+        let tokens;
+        try {
+          tokens = JSON.parse(storedTokens);
+        } catch (error) {
+          console.log("🚫 Invalid token format, clearing storage");
+          localStorage.removeItem("auth_tokens");
+          if (mounted) {
+            setLoading(false);
+          }
+          return;
+        }
+
+        // Check if tokens have required fields
+        if (
+          !tokens.access_token ||
+          !tokens.refresh_token ||
+          !tokens.token_type
+        ) {
+          console.log("🚫 Incomplete token data, clearing storage");
+          localStorage.removeItem("auth_tokens");
+          if (mounted) {
+            setLoading(false);
+          }
+          return;
+        }
+
+        // Check if access token is valid (not expired)
+        if (!isTokenValid(tokens.access_token)) {
+          console.log("⏰ Access token expired, checking refresh token...");
+
+          // Check if refresh token is also expired
+          if (!isTokenValid(tokens.refresh_token)) {
+            console.log("🚫 Both tokens expired, clearing storage");
+            localStorage.removeItem("auth_tokens");
+            if (mounted) {
+              setLoading(false);
+            }
+            return;
+          }
+
+          // If we reach here, access token is expired but refresh is valid
+          // Let the API service handle the refresh when needed
+          console.log("🔄 Will attempt token refresh on next API call");
+        }
+
+        console.log(
+          "✅ Tokens appear valid, attempting to get current user..."
+        );
+
+        // Only make API call if we have seemingly valid tokens
+        try {
           const user = await api.getCurrentUser();
           if (mounted) {
+            console.log("✅ User authenticated:", user.email);
             setUser(user);
+          }
+        } catch (error) {
+          console.error("❌ Failed to get current user:", error);
+
+          // If getting current user fails, clear tokens
+          localStorage.removeItem("auth_tokens");
+          if (mounted) {
+            setUser(null);
           }
         }
       } catch (error) {
-        console.error("Auth initialization failed:", error);
-        // Clear potentially invalid tokens
+        console.error("❌ Auth initialization error:", error);
+
+        // Clear tokens on any initialization error
+        localStorage.removeItem("auth_tokens");
         if (mounted) {
-          await api.logout();
+          setUser(null);
         }
       } finally {
         if (mounted) {
@@ -95,73 +180,95 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => {
       mounted = false;
     };
-  }, []); // Remove setUser and setLoading from dependencies to prevent loops
+  }, []); // Empty dependency array is correct
 
-  const login = useCallback(async (email: string, password: string): Promise<void> => {
-    try {
-      setLoading(true);
-      setError(null);
+  const login = useCallback(
+    async (email: string, password: string): Promise<void> => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      const user = await api.login({ email, password });
-      setUser(user);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Login failed";
-      setError(errorMessage);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, [setLoading, setError, setUser]);
+        console.log("🔐 Attempting login for:", email);
+        const user = await api.login({ email, password });
 
-  const register = useCallback(async (
-    email: string,
-    username: string,
-    password: string,
-    age?: number,
-  ): Promise<void> => {
-    try {
-      setLoading(true);
-      setError(null);
+        console.log("✅ Login successful:", user.email);
+        setUser(user);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Login failed";
+        console.error("❌ Login failed:", errorMessage);
+        setError(errorMessage);
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [setLoading, setError, setUser]
+  );
 
-      await api.register({ email, username, password, age });
+  const register = useCallback(
+    async (
+      email: string,
+      username: string,
+      password: string,
+      age?: number
+    ): Promise<void> => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      // Auto-login after successful registration
-      const user = await api.login({ email, password });
-      setUser(user);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Registration failed";
-      setError(errorMessage);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, [setLoading, setError, setUser]);
+        console.log("📝 Attempting registration for:", email);
+        await api.register({ email, username, password, age });
+
+        // Registration successful, now login
+        console.log("✅ Registration successful, logging in...");
+        const user = await api.login({ email, password });
+
+        console.log("✅ Auto-login successful:", user.email);
+        setUser(user);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Registration failed";
+        console.error("❌ Registration failed:", errorMessage);
+        setError(errorMessage);
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [setLoading, setError, setUser]
+  );
 
   const logout = useCallback(async (): Promise<void> => {
     try {
+      console.log("👋 Logging out user");
       await api.logout();
     } catch (error) {
       console.error("Logout error:", error);
       // Continue with logout even if API call fails
     } finally {
+      console.log("🧹 Clearing user state");
       setUser(null);
     }
   }, [setUser]);
 
   const refreshUser = useCallback(async (): Promise<void> => {
     try {
-      if (api.isAuthenticated) {
-        const user = await api.getCurrentUser();
-        setUser(user);
+      // Only attempt refresh if we're currently authenticated
+      if (!state.isAuthenticated || !api.isAuthenticated) {
+        console.log("🚫 Cannot refresh user - not authenticated");
+        return;
       }
+
+      console.log("🔄 Refreshing user data");
+      const user = await api.getCurrentUser();
+      setUser(user);
     } catch (error) {
       console.error("Failed to refresh user:", error);
       setError("Session expired. Please log in again.");
       await logout();
     }
-  }, [setUser, setError, logout]);
+  }, [state.isAuthenticated, setUser, setError, logout]);
 
   const contextValue: AuthContextType = {
     ...state,
