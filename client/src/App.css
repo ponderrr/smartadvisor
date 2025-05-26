@@ -2,19 +2,24 @@
   /* Colors */
   --primary-gradient: linear-gradient(to right, #059669, #16a34a);
   --primary-gradient-hover: linear-gradient(to right, #047857, #15803d);
-  --background-gradient: linear-gradient(135deg, #0f172a 0%, #064e3b 50%, #1e293b 100%);
+  --background-gradient: linear-gradient(
+    135deg,
+    #0f172a 0%,
+    #064e3b 50%,
+    #1e293b 100%
+  );
   --text-primary: #ffffff;
   --text-secondary: #9ca3af;
   --text-accent: #6ee7b7;
   --text-accent-hover: #a7f3d0;
   --overlay-light: rgba(255, 255, 255, 0.05);
   --overlay-border: rgba(255, 255, 255, 0.1);
-  
+
   /* Shadows */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-  
+
   /* Transitions */
   --transition-default: all 0.2s ease;
 }
@@ -59,7 +64,7 @@
   .container {
     padding: 0 0.5rem;
   }
-  
+
   .content-wrapper {
     padding: 1rem 0;
   }
@@ -97,6 +102,11 @@
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }

@@ -22,7 +22,7 @@ type RecommendationType = "movie" | "book" | "both";
 
 const QuestionsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth(); // Guaranteed to be authenticated due to ProtectedRoute
+  useAuth();
   const { getMaxQuestions, isFeatureLimited, currentSubscription } =
     useSubscription();
   const {
@@ -44,9 +44,6 @@ const QuestionsPage: React.FC = () => {
     getProgress,
   } = useRecommendations();
 
-  const [selectedType, setSelectedType] = useState<RecommendationType | null>(
-    null,
-  );
   const [isStarting, setIsStarting] = useState(false);
 
   // Get subscription info
@@ -145,7 +142,9 @@ const QuestionsPage: React.FC = () => {
               {/* Subscription Status */}
               <div className="subscription-status">
                 <div
-                  className={`status-badge ${currentSubscription?.tier || "free"}`}
+                  className={`status-badge ${
+                    currentSubscription?.tier || "free"
+                  }`}
                 >
                   {isLimited ? (
                     <>
@@ -428,5 +427,9 @@ const QuestionsPage: React.FC = () => {
     </div>
   );
 };
+
+function setSelectedType(_type: string) {
+  throw new Error("Function not implemented.");
+}
 
 export default QuestionsPage;

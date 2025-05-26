@@ -19,7 +19,6 @@ const SubscriptionTab: React.FC = () => {
   const {
     currentSubscription,
     availablePlans,
-    isLoading,
     error,
     cancelSubscription,
     resumeSubscription,

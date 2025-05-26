@@ -1,5 +1,6 @@
 // Enhanced API service with proper backend integration
-import axios, { AxiosError, AxiosInstance } from "axios";
+import axios from "axios";
+import type { AxiosError, AxiosInstance } from "axios";
 
 // Backend API Response Types
 interface ApiResponse<T> {
@@ -139,7 +140,7 @@ class ApiService {
         }
         return config;
       },
-      (error) => Promise.reject(error),
+      (error) => Promise.reject(error)
     );
 
     // Response interceptor for token refresh and error handling
@@ -155,7 +156,7 @@ class ApiService {
         ) {
           try {
             const newTokens = await this.refreshToken(
-              this.authTokens.refresh_token,
+              this.authTokens.refresh_token
             );
             this.setAuthTokens(newTokens);
             originalRequest.headers.Authorization = `Bearer ${newTokens.access_token}`;
@@ -168,7 +169,7 @@ class ApiService {
         }
 
         return Promise.reject(this.handleError(error));
-      },
+      }
     );
   }
 
@@ -205,7 +206,7 @@ class ApiService {
     if (error.response?.data) {
       const apiError = error.response.data as ApiResponse<any>;
       return new Error(
-        apiError.detail || apiError.message || "An error occurred",
+        apiError.detail || apiError.message || "An error occurred"
       );
     } else if (error.request) {
       return new Error("Network error - please check your connection");
@@ -218,7 +219,7 @@ class ApiService {
   async login(credentials: LoginCredentials): Promise<User> {
     const response = await this.api.post<AuthTokens>(
       "/auth/login",
-      credentials,
+      credentials
     );
     this.setAuthTokens(response.data);
     const userResponse = await this.getCurrentUser();
@@ -249,34 +250,48 @@ class ApiService {
   }
 
   // Recommendation methods
+  // Enhanced generateQuestions method for debugging
+  // Add this to your api.ts file in the ApiService class
+
   async generateQuestions(request: QuestionGenerationRequest): Promise<{
     recommendation_id: string;
     questions: Question[];
   }> {
+    console.log(
+      "Sending request to /recommendations/generate-questions:",
+      request
+    );
+
     const response = await this.api.post<{
       recommendation_id: string;
       questions: Question[];
     }>("/recommendations/generate-questions", request);
+
+    console.log("Response from generate-questions:", response.data);
     return response.data;
   }
 
   async submitAnswers(
     recommendationId: string,
-    answers: Answer[],
+    answers: Answer[]
   ): Promise<RecommendationResponse> {
+    console.log("Submitting answers:", { recommendationId, answers });
+
     const response = await this.api.post<RecommendationResponse>(
       "/recommendations/submit-answers",
       {
         recommendation_id: recommendationId,
         answers,
-      },
+      }
     );
+
+    console.log("Response from submit-answers:", response.data);
     return response.data;
   }
 
   async getRecommendationHistory(
     skip = 0,
-    limit = 10,
+    limit = 10
   ): Promise<{
     items: Array<{
       id: string;
@@ -294,10 +309,10 @@ class ApiService {
   }
 
   async getRecommendation(
-    recommendationId: string,
+    recommendationId: string
   ): Promise<RecommendationResponse> {
     const response = await this.api.get<RecommendationResponse>(
-      `/recommendations/${recommendationId}`,
+      `/recommendations/${recommendationId}`
     );
     return response.data;
   }
@@ -305,14 +320,14 @@ class ApiService {
   // Subscription methods
   async getSubscriptionPlans(): Promise<{ plans: SubscriptionPlan[] }> {
     const response = await this.api.get<{ plans: SubscriptionPlan[] }>(
-      "/subscriptions/plans",
+      "/subscriptions/plans"
     );
     return response.data;
   }
 
   async getSubscriptionStatus(): Promise<SubscriptionStatus> {
     const response = await this.api.get<SubscriptionStatus>(
-      "/subscriptions/status",
+      "/subscriptions/status"
     );
     return response.data;
   }
@@ -332,14 +347,14 @@ class ApiService {
 
   async cancelSubscription(): Promise<{ message: string }> {
     const response = await this.api.put<{ message: string }>(
-      "/subscriptions/cancel",
+      "/subscriptions/cancel"
     );
     return response.data;
   }
 
   async resumeSubscription(): Promise<{ message: string }> {
     const response = await this.api.put<{ message: string }>(
-      "/subscriptions/resume",
+      "/subscriptions/resume"
     );
     return response.data;
   }
@@ -386,12 +401,10 @@ class ApiService {
 
 // Create and export API instance
 const api = new ApiService(
-  import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1",
+  import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
 );
 
-// Initialize the API service
-api.loadStoredTokens();
-
+// Export the API instance
 export default api;
 export type {
   User,

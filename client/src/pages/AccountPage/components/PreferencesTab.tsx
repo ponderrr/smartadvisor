@@ -4,7 +4,6 @@ import {
   Check,
   AlertCircle,
   Loader2,
-  Settings,
   Eye,
   Filter,
   Globe,

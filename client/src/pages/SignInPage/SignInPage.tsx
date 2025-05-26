@@ -137,7 +137,9 @@ const SignInPage: React.FC = () => {
                   type="email"
                   id="email"
                   name="email"
-                  className={`input ${validationErrors.email ? "input-error" : ""}`}
+                  className={`input ${
+                    validationErrors.email ? "input-error" : ""
+                  }`}
                   placeholder="your.email@example.com"
                   value={formData.email}
                   onChange={handleInputChange}
@@ -160,7 +162,9 @@ const SignInPage: React.FC = () => {
                   type={showPassword ? "text" : "password"}
                   id="password"
                   name="password"
-                  className={`input ${validationErrors.password ? "input-error" : ""}`}
+                  className={`input ${
+                    validationErrors.password ? "input-error" : ""
+                  }`}
                   placeholder="Enter your password"
                   value={formData.password}
                   onChange={handleInputChange}

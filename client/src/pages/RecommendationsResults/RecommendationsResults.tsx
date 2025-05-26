@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useRecommendations } from "../../context/RecommendationContext";
 import { useAuth } from "../../context/AuthContext";
-import { MovieRecommendation, BookRecommendation } from "../../services/api";
+import type { MovieRecommendation, BookRecommendation } from "../../services/api";
 import "./RecommendationsResults.css";
 
 const RecommendationsResults: React.FC = () => {
