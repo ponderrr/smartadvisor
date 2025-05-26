@@ -1,9 +1,9 @@
-// Enhanced API service with proper backend integration
+// client/src/services/api.ts
 import axios from "axios";
 import type { AxiosError, AxiosInstance } from "axios";
 
 // Extend AxiosRequestConfig to include _retry
-declare module 'axios' {
+declare module "axios" {
   interface InternalAxiosRequestConfig {
     _retry?: boolean;
   }
@@ -158,13 +158,15 @@ class ApiService {
       async (error: AxiosError) => {
         const originalRequest = error.config;
 
-        // Check if this is a 401 error and we have a refresh token
+        // Check if this is a 401 error and we should attempt refresh
         if (
           error.response?.status === 401 &&
           this.authTokens?.refresh_token &&
           originalRequest &&
           !originalRequest._retry && // Prevent infinite loops
-          !this.isRefreshTokenExpired() // Don't try if refresh token is expired
+          !this.isRefreshTokenExpired() && // Don't try if refresh token is expired
+          !originalRequest.url?.includes("/auth/refresh") && // Don't retry refresh endpoint
+          !originalRequest.url?.includes("/auth/login") // Don't retry login endpoint
         ) {
           // Mark this request as a retry
           originalRequest._retry = true;
@@ -172,6 +174,7 @@ class ApiService {
           try {
             // If we're already refreshing, wait for that to complete
             if (this.isRefreshing && this.refreshPromise) {
+              console.log("⏳ Waiting for ongoing token refresh...");
               const newTokens = await this.refreshPromise;
               originalRequest.headers.Authorization = `Bearer ${newTokens.access_token}`;
               return this.api(originalRequest);
@@ -192,9 +195,13 @@ class ApiService {
             return this.api(originalRequest);
           } catch (refreshError) {
             console.error("🔄 Token refresh failed:", refreshError);
-            // Clear tokens and let auth context handle the redirect
+            // Clear tokens and let the user re-authenticate
             this.clearAuthTokens();
-            throw refreshError;
+            // Don't throw here for login/register endpoints
+            if (originalRequest.url?.includes("/auth/")) {
+              return Promise.reject(this.handleError(error));
+            }
+            throw this.handleError(refreshError as AxiosError);
           } finally {
             this.isRefreshing = false;
             this.refreshPromise = null;
@@ -245,7 +252,7 @@ class ApiService {
       const payload = JSON.parse(
         atob(this.authTokens.refresh_token.split(".")[1])
       );
-      const isExpired = payload.exp * 1000 < Date.now();
+      const isExpired = payload.exp * 1000 < Date.now() + 60000; // 1 minute buffer
       if (isExpired) {
         console.log("⏰ Refresh token is expired");
       }
@@ -292,20 +299,54 @@ class ApiService {
   // Authentication methods
   async login(credentials: LoginCredentials): Promise<User> {
     console.log("🔐 API: Attempting login");
-    const response = await this.api.post<AuthTokens>(
-      "/auth/login",
-      credentials
-    );
-    this.setAuthTokens(response.data);
 
-    const userResponse = await this.getCurrentUser();
+    // Clear any existing tokens before login
+    this.clearAuthTokens();
+
+    const response = await this.api.post<any>("/auth/login", credentials);
+
+    // Handle different response formats
+    let tokens: AuthTokens;
+    let user: User;
+
+    if (response.data.access_token) {
+      // Direct token response
+      tokens = {
+        access_token: response.data.access_token,
+        refresh_token: response.data.refresh_token,
+        token_type: response.data.token_type || "bearer",
+      };
+      this.setAuthTokens(tokens);
+
+      // Get user info
+      user = await this.getCurrentUser();
+    } else {
+      throw new Error("Invalid login response format");
+    }
+
     console.log("✅ API: Login successful");
-    return userResponse;
+    return user;
   }
 
   async register(data: RegisterData): Promise<User> {
     console.log("📝 API: Attempting registration");
-    const response = await this.api.post<User>("/auth/register", data);
+
+    // Clear any existing tokens before registration
+    this.clearAuthTokens();
+
+    const response = await this.api.post<any>("/auth/register", data);
+
+    // Handle registration response - may include tokens
+    if (response.data.access_token) {
+      const tokens: AuthTokens = {
+        access_token: response.data.access_token,
+        refresh_token: response.data.refresh_token,
+        token_type: response.data.token_type || "bearer",
+      };
+      this.setAuthTokens(tokens);
+      return response.data.user;
+    }
+
     console.log("✅ API: Registration successful");
     return response.data;
   }
