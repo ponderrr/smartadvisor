@@ -1,4 +1,3 @@
-// client/src/utils/tokenCleanup.ts
 /**
  * Utility to clean up invalid tokens from localStorage
  * This should be called when the app starts to prevent 401 loops
@@ -22,16 +21,26 @@ export const clearInvalidTokens = (): void => {
       return;
     }
 
-    // Check if tokens are expired (basic check)
+    // Check if both tokens are expired
     try {
-      const payload = JSON.parse(atob(tokens.access_token.split(".")[1]));
-      const isExpired = payload.exp * 1000 < Date.now();
+      const accessPayload = JSON.parse(atob(tokens.access_token.split(".")[1]));
+      const refreshPayload = JSON.parse(
+        atob(tokens.refresh_token.split(".")[1])
+      );
 
-      if (isExpired) {
-        console.log("⏰ Access token expired, will attempt refresh");
-        // Don't clear here - let the API service handle refresh
+      const accessExpired = accessPayload.exp * 1000 < Date.now();
+      const refreshExpired = refreshPayload.exp * 1000 < Date.now();
+
+      if (refreshExpired) {
+        console.log("🗑️ Refresh token expired, clearing all tokens");
+        localStorage.removeItem("auth_tokens");
+      } else if (accessExpired) {
+        console.log(
+          "⏰ Access token expired, refresh token valid - keeping tokens"
+        );
+        // Keep tokens, let API service handle refresh
       } else {
-        console.log("✅ Tokens appear valid");
+        console.log("✅ Both tokens are valid");
       }
     } catch (error) {
       console.log("🚫 Invalid token format, clearing");
@@ -46,4 +55,22 @@ export const clearInvalidTokens = (): void => {
 export const clearAllTokens = (): void => {
   console.log("🗑️ Manually clearing all tokens");
   localStorage.removeItem("auth_tokens");
+};
+
+export const hasValidTokens = (): boolean => {
+  try {
+    const storedTokens = localStorage.getItem("auth_tokens");
+    if (!storedTokens) return false;
+
+    const tokens = JSON.parse(storedTokens);
+    if (!tokens.access_token || !tokens.refresh_token) return false;
+
+    // Check if refresh token is still valid
+    const refreshPayload = JSON.parse(atob(tokens.refresh_token.split(".")[1]));
+    const refreshExpired = refreshPayload.exp * 1000 < Date.now();
+
+    return !refreshExpired;
+  } catch {
+    return false;
+  }
 };

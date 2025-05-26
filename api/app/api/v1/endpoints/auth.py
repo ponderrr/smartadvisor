@@ -41,7 +41,7 @@ async def register(user_data: UserRegister, db: AsyncSession = Depends(get_db)):
         )
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login")
 async def login(user_credentials: UserLogin, db: AsyncSession = Depends(get_db)):
     """Login user and return tokens."""
     try:
@@ -50,11 +50,11 @@ async def login(user_credentials: UserLogin, db: AsyncSession = Depends(get_db))
             db, email=user_credentials.email, password=user_credentials.password
         )
 
-        return Token(
-            access_token=result["access_token"],
-            refresh_token=result["refresh_token"],
-            token_type=result["token_type"],
-        )
+        return {
+            "access_token": result["access_token"],
+            "refresh_token": result["refresh_token"],
+            "token_type": result["token_type"],
+        }
     except HTTPException as e:
         logger.warning(f"Login failed for {user_credentials.email}: {e.detail}")
         raise
@@ -92,7 +92,6 @@ async def forgot_password(
         return {"message": "If the email exists, a password reset link has been sent"}
     except Exception as e:
         logger.error(f"Password reset error: {str(e)}")
-        # Always return success for security (don't reveal if email exists)
         return {"message": "If the email exists, a password reset link has been sent"}
 
 

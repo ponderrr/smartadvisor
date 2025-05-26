@@ -11,7 +11,24 @@ logger = logging.getLogger(__name__)
 
 class OpenAIService:
     def __init__(self):
+        if not settings.OPENAI_API_KEY:
+            logger.error(
+                "⚠️  OPENAI_API_KEY is not configured! Recommendations will fail."
+            )
+            raise ValueError(
+                "OpenAI API key is required for AI recommendations. Please set OPENAI_API_KEY in your environment variables."
+            )
+
+        if not settings.validate_openai_key():
+            logger.error(
+                "⚠️  Invalid OPENAI_API_KEY format! Key should start with 'sk-'"
+            )
+            raise ValueError(
+                "Invalid OpenAI API key format. Key should start with 'sk-'"
+            )
+
         self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        logger.info("✅ OpenAI service initialized successfully")
 
     async def generate_questions(
         self,
@@ -21,6 +38,10 @@ class OpenAIService:
         accessibility_needs: Dict = None,
     ) -> List[Dict[str, Any]]:
         """Generate personalized questions for recommendations."""
+
+        logger.info(
+            f"🤖 Generating {num_questions} questions for {recommendation_type.value}"
+        )
 
         type_text = {
             RecommendationType.MOVIE: "movies",
@@ -64,6 +85,7 @@ class OpenAIService:
         Do not include any other text or explanation."""
 
         try:
+            logger.info("🔄 Making OpenAI API request for questions...")
             response = await self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": prompt}],
@@ -72,14 +94,24 @@ class OpenAIService:
             )
 
             content = response.choices[0].message.content.strip()
-            questions = json.loads(content)
+            logger.info(f"✅ Received response from OpenAI: {content[:100]}...")
 
+            questions = json.loads(content)
+            logger.info(f"✅ Successfully parsed {len(questions)} questions")
             return questions
 
+        except json.JSONDecodeError as e:
+            logger.error(f"❌ Failed to parse OpenAI response as JSON: {e}")
+            logger.error(f"Raw response: {content}")
+            raise Exception(f"OpenAI returned invalid JSON response: {e}")
+
+        except openai.APIError as e:
+            logger.error(f"❌ OpenAI API error: {e}")
+            raise Exception(f"OpenAI API error: {e}")
+
         except Exception as e:
-            logger.error(f"Error generating questions: {e}")
-            # Fallback questions
-            return self._get_fallback_questions(recommendation_type, num_questions)
+            logger.error(f"❌ Unexpected error generating questions: {e}")
+            raise Exception(f"Failed to generate questions: {e}")
 
     async def generate_recommendations(
         self,
@@ -89,6 +121,8 @@ class OpenAIService:
         accessibility_needs: Dict = None,
     ) -> Dict[str, Any]:
         """Generate recommendations based on user answers."""
+
+        logger.info(f"🎯 Generating recommendations for {recommendation_type.value}")
 
         qa_text = "\n".join(
             [f"Q: {qa['question']}\nA: {qa['answer']}" for qa in questions_and_answers]
@@ -153,6 +187,7 @@ class OpenAIService:
         Only include movies or books arrays based on the recommendation type requested."""
 
         try:
+            logger.info("🔄 Making OpenAI API request for recommendations...")
             response = await self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": prompt}],
@@ -161,33 +196,32 @@ class OpenAIService:
             )
 
             content = response.choices[0].message.content.strip()
+            logger.info(f"✅ Received recommendations from OpenAI: {content[:100]}...")
+
             recommendations = json.loads(content)
+
+            movies_count = len(recommendations.get("movies", []))
+            books_count = len(recommendations.get("books", []))
+            logger.info(
+                f"✅ Successfully generated {movies_count} movies and {books_count} books"
+            )
 
             return recommendations
 
+        except json.JSONDecodeError as e:
+            logger.error(f"❌ Failed to parse recommendations JSON: {e}")
+            logger.error(f"Raw response: {content}")
+            raise Exception(
+                f"OpenAI returned invalid JSON response for recommendations: {e}"
+            )
+
+        except openai.APIError as e:
+            logger.error(f"❌ OpenAI API error generating recommendations: {e}")
+            raise Exception(f"OpenAI API error: {e}")
+
         except Exception as e:
-            logger.error(f"Error generating recommendations: {e}")
-            return {"movies": [], "books": []}
-
-    def _get_fallback_questions(
-        self, rec_type: RecommendationType, num: int
-    ) -> List[Dict[str, Any]]:
-        """Fallback questions if OpenAI fails."""
-        base_questions = [
-            {"text": "What genres do you typically enjoy?", "order": 1},
-            {"text": "Do you prefer newer releases or classic titles?", "order": 2},
-            {"text": "What mood are you in for your next recommendation?", "order": 3},
-            {
-                "text": "Do you have any favorite actors, directors, or authors?",
-                "order": 4,
-            },
-            {
-                "text": "How long do you typically like to spend reading/watching?",
-                "order": 5,
-            },
-        ]
-
-        return base_questions[: min(num, len(base_questions))]
+            logger.error(f"❌ Unexpected error generating recommendations: {e}")
+            raise Exception(f"Failed to generate recommendations: {e}")
 
 
 openai_service = OpenAIService()

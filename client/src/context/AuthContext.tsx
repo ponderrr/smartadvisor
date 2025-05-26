@@ -40,7 +40,7 @@ interface AuthProviderProps {
 const isTokenValid = (tokenString: string): boolean => {
   try {
     const payload = JSON.parse(atob(tokenString.split(".")[1]));
-    const isExpired = payload.exp * 1000 < Date.now();
+    const isExpired = payload.exp * 1000 < Date.now() + 60000; // Add 1 minute buffer
     return !isExpired;
   } catch {
     return false;
@@ -84,7 +84,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         console.log("🔐 Initializing auth state...");
 
-        // First, check if we have tokens at all
+        // Check if we have tokens
         const storedTokens = localStorage.getItem("auth_tokens");
         if (!storedTokens) {
           console.log("📝 No stored tokens found - user not authenticated");
@@ -121,50 +121,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           return;
         }
 
-        // Check if access token is valid (not expired)
-        if (!isTokenValid(tokens.access_token)) {
-          console.log("⏰ Access token expired, checking refresh token...");
-
-          // Check if refresh token is also expired
-          if (!isTokenValid(tokens.refresh_token)) {
-            console.log("🚫 Both tokens expired, clearing storage");
-            localStorage.removeItem("auth_tokens");
+        // Only try to get current user if access token is valid
+        if (isTokenValid(tokens.access_token)) {
+          console.log("✅ Access token valid, getting current user...");
+          try {
+            const user = await api.getCurrentUser();
             if (mounted) {
-              setLoading(false);
+              console.log("✅ User authenticated:", user.email);
+              setUser(user);
             }
-            return;
+          } catch (error) {
+            console.log("❌ Failed to get current user, but tokens exist");
+            // Don't clear tokens here - let the API service handle refresh
+            if (mounted) {
+              setUser(null);
+            }
           }
-
-          // If we reach here, access token is expired but refresh is valid
-          // Let the API service handle the refresh when needed
-          console.log("🔄 Will attempt token refresh on next API call");
-        }
-
-        console.log(
-          "✅ Tokens appear valid, attempting to get current user..."
-        );
-
-        // Only make API call if we have seemingly valid tokens
-        try {
-          const user = await api.getCurrentUser();
-          if (mounted) {
-            console.log("✅ User authenticated:", user.email);
-            setUser(user);
-          }
-        } catch (error) {
-          console.error("❌ Failed to get current user:", error);
-
-          // If getting current user fails, clear tokens
-          localStorage.removeItem("auth_tokens");
+        } else {
+          console.log("⏰ Access token expired, waiting for refresh");
+          // Don't make API calls with expired tokens
           if (mounted) {
             setUser(null);
           }
         }
       } catch (error) {
         console.error("❌ Auth initialization error:", error);
-
-        // Clear tokens on any initialization error
-        localStorage.removeItem("auth_tokens");
         if (mounted) {
           setUser(null);
         }
@@ -180,7 +161,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => {
       mounted = false;
     };
-  }, []); // Empty dependency array is correct
+  }, [setLoading, setUser]);
 
   const login = useCallback(
     async (email: string, password: string): Promise<void> => {
@@ -254,8 +235,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshUser = useCallback(async (): Promise<void> => {
     try {
-      // Only attempt refresh if we're currently authenticated
-      if (!state.isAuthenticated || !api.isAuthenticated) {
+      // Only attempt refresh if we think we're authenticated
+      if (!state.isAuthenticated) {
         console.log("🚫 Cannot refresh user - not authenticated");
         return;
       }
@@ -265,10 +246,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(user);
     } catch (error) {
       console.error("Failed to refresh user:", error);
-      setError("Session expired. Please log in again.");
-      await logout();
+      // Don't immediately logout - let the user try to login again
+      setError("Session may have expired. Please try logging in again.");
     }
-  }, [state.isAuthenticated, setUser, setError, logout]);
+  }, [state.isAuthenticated, setUser, setError]);
 
   const contextValue: AuthContextType = {
     ...state,
