@@ -12,16 +12,14 @@ logger = logging.getLogger(__name__)
 class OpenAIService:
     def __init__(self):
         if not settings.OPENAI_API_KEY:
-            logger.error(
-                "⚠️  OPENAI_API_KEY is not configured! Recommendations will fail."
-            )
+            logger.error("❌ OPENAI_API_KEY is not configured!")
             raise ValueError(
                 "OpenAI API key is required for AI recommendations. Please set OPENAI_API_KEY in your environment variables."
             )
 
         if not settings.validate_openai_key():
             logger.error(
-                "⚠️  Invalid OPENAI_API_KEY format! Key should start with 'sk-'"
+                "❌ Invalid OPENAI_API_KEY format! Key should start with 'sk-'"
             )
             raise ValueError(
                 "Invalid OpenAI API key format. Key should start with 'sk-'"

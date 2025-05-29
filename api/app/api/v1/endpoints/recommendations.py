@@ -18,6 +18,7 @@ from app.schemas.recommendation import (
     RecommendationHistoryResponse,
     MovieRecommendationResponse,
     BookRecommendationResponse,
+    RecommendationType,
 )
 
 router = APIRouter()
@@ -35,6 +36,40 @@ async def get_user_subscription_tier(db: AsyncSession, user_id: str) -> str:
         return "free"
 
 
+@router.get("/limits")
+async def get_recommendation_limits(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Get user's recommendation limits based on subscription."""
+    user_tier = await get_user_subscription_tier(db, current_user.id)
+
+    limits = {
+        "free": {"max_questions": 5, "features": ["Basic recommendations"]},
+        "premium-monthly": {
+            "max_questions": 15,
+            "features": ["Enhanced AI recommendations", "Unlimited history"],
+        },
+        "premium-annual": {
+            "max_questions": 15,
+            "features": [
+                "Enhanced AI recommendations",
+                "Unlimited history",
+                "Priority support",
+            ],
+        },
+    }
+
+    user_limits = limits.get(user_tier, limits["free"])
+
+    return {
+        "tier": user_tier,
+        "max_questions": user_limits["max_questions"],
+        "min_questions": 3,
+        "features": user_limits["features"],
+    }
+
+
 @router.post("/generate-questions")
 async def generate_questions(
     request: QuestionGenerationRequest,
@@ -43,13 +78,20 @@ async def generate_questions(
 ):
     """Generate questions for a recommendation session."""
 
-    user_tier = await get_user_subscription_tier(db, current_user.id)
+    # Validate question count
+    if request.num_questions < 3 or request.num_questions > 15:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Number of questions must be between 3 and 15",
+        )
 
+    user_tier = await get_user_subscription_tier(db, current_user.id)
     max_questions = 5 if user_tier == "free" else 15
+
     if request.num_questions > max_questions:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Your subscription allows up to {max_questions} questions",
+            detail=f"Your {user_tier} subscription allows up to {max_questions} questions. Upgrade to premium for up to 15 questions.",
         )
 
     try:
@@ -65,7 +107,12 @@ async def generate_questions(
             for q in sorted(recommendation.questions, key=lambda x: x.question_order)
         ]
 
-        return {"recommendation_id": recommendation.id, "questions": questions}
+        return {
+            "recommendation_id": recommendation.id,
+            "questions": questions,
+            "type": request.type,
+            "question_count": len(questions),
+        }
 
     except Exception as e:
         raise HTTPException(
@@ -98,6 +145,28 @@ async def submit_answers(
             detail="Not authorized to access this recommendation",
         )
 
+    # Validate that we have answers for all questions
+    expected_question_ids = {q.id for q in recommendation.questions}
+    provided_question_ids = {a.question_id for a in submission.answers}
+
+    if expected_question_ids != provided_question_ids:
+        missing_questions = expected_question_ids - provided_question_ids
+        extra_questions = provided_question_ids - expected_question_ids
+        error_parts = []
+        if missing_questions:
+            error_parts.append(
+                f"Missing answers for questions: {list(missing_questions)}"
+            )
+        if extra_questions:
+            error_parts.append(
+                f"Extra answers for unknown questions: {list(extra_questions)}"
+            )
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Answer validation failed: {'; '.join(error_parts)}",
+        )
+
     try:
         updated_recommendation = await recommendation_service.process_answers(
             db=db, recommendation=recommendation, answers=submission.answers
@@ -120,7 +189,7 @@ async def submit_answers(
                 poster_path=movie.poster_path,
                 release_date=movie.release_date,
                 runtime=movie.runtime,
-                genres=[],
+                genres=[],  # TODO: Implement genre relationships
             )
             for movie in updated_recommendation.movie_recommendations or []
         ]
@@ -137,7 +206,7 @@ async def submit_answers(
                 published_date=book.published_date,
                 page_count=book.page_count,
                 publisher=book.publisher,
-                genres=[],
+                genres=[],  # TODO: Implement genre relationships
             )
             for book in updated_recommendation.book_recommendations or []
         ]
