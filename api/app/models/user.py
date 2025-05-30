@@ -30,3 +30,6 @@ class User(Base):
     recommendation_history = relationship(
         "UserRecommendationHistory", back_populates="user"
     )
+    saved_items = relationship(
+        "SavedItem", back_populates="user", cascade="all, delete-orphan"
+    )

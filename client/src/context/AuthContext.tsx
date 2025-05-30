@@ -23,7 +23,7 @@ interface AuthContextType extends AuthState {
     email: string,
     username: string,
     password: string,
-    age?: number,
+    age?: number
   ) => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
@@ -35,6 +35,17 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 interface AuthProviderProps {
   children: ReactNode;
 }
+
+// Helper function to validate token without making API calls
+const isTokenValid = (tokenString: string): boolean => {
+  try {
+    const payload = JSON.parse(atob(tokenString.split(".")[1]));
+    const isExpired = payload.exp * 1000 < Date.now() + 60000; // Add 1 minute buffer
+    return !isExpired;
+  } catch {
+    return false;
+  }
+};
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [state, setState] = useState<AuthState>({
@@ -71,17 +82,72 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const initializeAuth = async () => {
       try {
-        if (api.isAuthenticated) {
-          const user = await api.getCurrentUser();
+        console.log("🔐 Initializing auth state...");
+
+        // Check if we have tokens
+        const storedTokens = localStorage.getItem("auth_tokens");
+        if (!storedTokens) {
+          console.log("📝 No stored tokens found - user not authenticated");
           if (mounted) {
-            setUser(user);
+            setLoading(false);
+          }
+          return;
+        }
+
+        // Parse and validate token structure
+        let tokens;
+        try {
+          tokens = JSON.parse(storedTokens);
+        } catch (error) {
+          console.log("🚫 Invalid token format, clearing storage");
+          localStorage.removeItem("auth_tokens");
+          if (mounted) {
+            setLoading(false);
+          }
+          return;
+        }
+
+        // Check if tokens have required fields
+        if (
+          !tokens.access_token ||
+          !tokens.refresh_token ||
+          !tokens.token_type
+        ) {
+          console.log("🚫 Incomplete token data, clearing storage");
+          localStorage.removeItem("auth_tokens");
+          if (mounted) {
+            setLoading(false);
+          }
+          return;
+        }
+
+        // Only try to get current user if access token is valid
+        if (isTokenValid(tokens.access_token)) {
+          console.log("✅ Access token valid, getting current user...");
+          try {
+            const user = await api.getCurrentUser();
+            if (mounted) {
+              console.log("✅ User authenticated:", user.email);
+              setUser(user);
+            }
+          } catch (error) {
+            console.log("❌ Failed to get current user, but tokens exist");
+            // Don't clear tokens here - let the API service handle refresh
+            if (mounted) {
+              setUser(null);
+            }
+          }
+        } else {
+          console.log("⏰ Access token expired, waiting for refresh");
+          // Don't make API calls with expired tokens
+          if (mounted) {
+            setUser(null);
           }
         }
       } catch (error) {
-        console.error("Auth initialization failed:", error);
-        // Clear potentially invalid tokens
+        console.error("❌ Auth initialization error:", error);
         if (mounted) {
-          await api.logout();
+          setUser(null);
         }
       } finally {
         if (mounted) {
@@ -95,73 +161,95 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => {
       mounted = false;
     };
-  }, []); // Remove setUser and setLoading from dependencies to prevent loops
+  }, [setLoading, setUser]);
 
-  const login = useCallback(async (email: string, password: string): Promise<void> => {
-    try {
-      setLoading(true);
-      setError(null);
+  const login = useCallback(
+    async (email: string, password: string): Promise<void> => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      const user = await api.login({ email, password });
-      setUser(user);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Login failed";
-      setError(errorMessage);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, [setLoading, setError, setUser]);
+        console.log("🔐 Attempting login for:", email);
+        const user = await api.login({ email, password });
 
-  const register = useCallback(async (
-    email: string,
-    username: string,
-    password: string,
-    age?: number,
-  ): Promise<void> => {
-    try {
-      setLoading(true);
-      setError(null);
+        console.log("✅ Login successful:", user.email);
+        setUser(user);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Login failed";
+        console.error("❌ Login failed:", errorMessage);
+        setError(errorMessage);
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [setLoading, setError, setUser]
+  );
 
-      await api.register({ email, username, password, age });
+  const register = useCallback(
+    async (
+      email: string,
+      username: string,
+      password: string,
+      age?: number
+    ): Promise<void> => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      // Auto-login after successful registration
-      const user = await api.login({ email, password });
-      setUser(user);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Registration failed";
-      setError(errorMessage);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, [setLoading, setError, setUser]);
+        console.log("📝 Attempting registration for:", email);
+        await api.register({ email, username, password, age });
+
+        // Registration successful, now login
+        console.log("✅ Registration successful, logging in...");
+        const user = await api.login({ email, password });
+
+        console.log("✅ Auto-login successful:", user.email);
+        setUser(user);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Registration failed";
+        console.error("❌ Registration failed:", errorMessage);
+        setError(errorMessage);
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [setLoading, setError, setUser]
+  );
 
   const logout = useCallback(async (): Promise<void> => {
     try {
+      console.log("👋 Logging out user");
       await api.logout();
     } catch (error) {
       console.error("Logout error:", error);
       // Continue with logout even if API call fails
     } finally {
+      console.log("🧹 Clearing user state");
       setUser(null);
     }
   }, [setUser]);
 
   const refreshUser = useCallback(async (): Promise<void> => {
     try {
-      if (api.isAuthenticated) {
-        const user = await api.getCurrentUser();
-        setUser(user);
+      // Only attempt refresh if we think we're authenticated
+      if (!state.isAuthenticated) {
+        console.log("🚫 Cannot refresh user - not authenticated");
+        return;
       }
+
+      console.log("🔄 Refreshing user data");
+      const user = await api.getCurrentUser();
+      setUser(user);
     } catch (error) {
       console.error("Failed to refresh user:", error);
-      setError("Session expired. Please log in again.");
-      await logout();
+      // Don't immediately logout - let the user try to login again
+      setError("Session may have expired. Please try logging in again.");
     }
-  }, [setUser, setError, logout]);
+  }, [state.isAuthenticated, setUser, setError]);
 
   const contextValue: AuthContextType = {
     ...state,

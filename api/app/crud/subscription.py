@@ -27,5 +27,17 @@ class CRUDSubscription(CRUDBase[Subscription, SubscriptionCreate, SubscriptionUp
         )
         return result.scalar_one_or_none()
 
+    async def create_for_user(
+        self, db: AsyncSession, *, user_id: str, obj_in: SubscriptionCreate
+    ) -> Subscription:
+        """Create subscription for a specific user."""
+        create_data = obj_in.dict()
+        create_data["user_id"] = user_id
+        db_obj = Subscription(**create_data)
+        db.add(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
+        return db_obj
+
 
 subscription_crud = CRUDSubscription(Subscription)

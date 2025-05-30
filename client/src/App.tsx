@@ -1,4 +1,3 @@
-// client/src/App.tsx
 import React from "react";
 import {
   BrowserRouter as Router,
@@ -10,6 +9,9 @@ import {
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { RecommendationProvider } from "./context/RecommendationContext";
 import { SubscriptionProvider } from "./context/SubscriptionContext";
+import { SavedItemsProvider } from "./context/SavedItemsContext"; // Add this import
+import { clearInvalidTokens } from "./utils/tokenCleanup";
+import TokenDebug from "./components/debug/TokenDebug";
 
 // Import the new glassmorphism pages
 import HomePage from "./pages/HomePage/HomePage";
@@ -144,6 +146,12 @@ function AppRoutes() {
 
 // Main App Component
 function App() {
+  // Clean up invalid tokens before starting the app
+  React.useEffect(() => {
+    console.log("🚀 Starting SmartAdvisor...");
+    clearInvalidTokens();
+  }, []);
+
   // Set up theme detection
   React.useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
@@ -162,9 +170,12 @@ function App() {
     <Router>
       <AuthProvider>
         <SubscriptionProvider>
-          <RecommendationProvider>
-            <AppRoutes />
-          </RecommendationProvider>
+          <SavedItemsProvider>
+            <RecommendationProvider>
+              <AppRoutes />
+              <TokenDebug />
+            </RecommendationProvider>
+          </SavedItemsProvider>
         </SubscriptionProvider>
       </AuthProvider>
     </Router>

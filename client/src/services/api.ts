@@ -1,6 +1,36 @@
-// Enhanced API service with proper backend integration
 import axios from "axios";
 import type { AxiosError, AxiosInstance } from "axios";
+
+// Extend AxiosRequestConfig to include _retry
+declare module "axios" {
+  interface InternalAxiosRequestConfig {
+    _retry?: boolean;
+  }
+}
+
+interface SavedItem {
+  id: string;
+  user_id: string;
+  item_id: string;
+  item_type: "movie" | "book";
+  item_title: string;
+  item_data: any; // Full movie/book data
+  created_at: string;
+}
+
+interface SaveItemRequest {
+  item_id: string;
+  item_type: "movie" | "book";
+  item_title: string;
+  item_data: any;
+}
+
+interface QuestionLimits {
+  min_questions: number;
+  max_questions: number;
+  subscription_tier: string;
+  current_limit: number;
+}
 
 // Backend API Response Types
 interface ApiResponse<T> {
@@ -117,6 +147,8 @@ interface SubscriptionStatus {
 class ApiService {
   private api: AxiosInstance;
   private authTokens: AuthTokens | null = null;
+  private isRefreshing = false;
+  private refreshPromise: Promise<AuthTokens> | null = null;
 
   constructor(baseURL: string) {
     this.api = axios.create({
@@ -149,22 +181,53 @@ class ApiService {
       async (error: AxiosError) => {
         const originalRequest = error.config;
 
+        // Check if this is a 401 error and we should attempt refresh
         if (
           error.response?.status === 401 &&
           this.authTokens?.refresh_token &&
-          originalRequest
+          originalRequest &&
+          !originalRequest._retry && // Prevent infinite loops
+          !this.isRefreshTokenExpired() && // Don't try if refresh token is expired
+          !originalRequest.url?.includes("/auth/refresh") && // Don't retry refresh endpoint
+          !originalRequest.url?.includes("/auth/login") // Don't retry login endpoint
         ) {
+          // Mark this request as a retry
+          originalRequest._retry = true;
+
           try {
-            const newTokens = await this.refreshToken(
+            // If we're already refreshing, wait for that to complete
+            if (this.isRefreshing && this.refreshPromise) {
+              console.log("⏳ Waiting for ongoing token refresh...");
+              const newTokens = await this.refreshPromise;
+              originalRequest.headers.Authorization = `Bearer ${newTokens.access_token}`;
+              return this.api(originalRequest);
+            }
+
+            // Start refresh process
+            console.log("🔄 Starting token refresh...");
+            this.isRefreshing = true;
+            this.refreshPromise = this.refreshToken(
               this.authTokens.refresh_token
             );
+
+            const newTokens = await this.refreshPromise;
             this.setAuthTokens(newTokens);
+
+            // Retry the original request with new token
             originalRequest.headers.Authorization = `Bearer ${newTokens.access_token}`;
             return this.api(originalRequest);
           } catch (refreshError) {
+            console.error("🔄 Token refresh failed:", refreshError);
+            // Clear tokens and let the user re-authenticate
             this.clearAuthTokens();
-            window.location.href = "/signin";
-            throw refreshError;
+            // Don't throw here for login/register endpoints
+            if (originalRequest.url?.includes("/auth/")) {
+              return Promise.reject(this.handleError(error));
+            }
+            throw this.handleError(refreshError as AxiosError);
+          } finally {
+            this.isRefreshing = false;
+            this.refreshPromise = null;
           }
         }
 
@@ -174,66 +237,206 @@ class ApiService {
   }
 
   private loadStoredTokens() {
-    const storedTokens = localStorage.getItem("auth_tokens");
-    if (storedTokens) {
-      try {
-        this.authTokens = JSON.parse(storedTokens);
-      } catch (error) {
-        console.error("Failed to parse stored tokens:", error);
-        localStorage.removeItem("auth_tokens");
+    try {
+      const storedTokens = localStorage.getItem("auth_tokens");
+      if (storedTokens) {
+        const tokens = JSON.parse(storedTokens);
+        // Basic validation of token structure
+        if (tokens.access_token && tokens.refresh_token && tokens.token_type) {
+          this.authTokens = tokens;
+          console.log("📱 Loaded stored tokens");
+        } else {
+          console.warn("🚫 Invalid token structure, clearing storage");
+          localStorage.removeItem("auth_tokens");
+        }
       }
+    } catch (error) {
+      console.error("Failed to parse stored tokens:", error);
+      localStorage.removeItem("auth_tokens");
     }
   }
 
   private setAuthTokens(tokens: AuthTokens) {
     this.authTokens = tokens;
     localStorage.setItem("auth_tokens", JSON.stringify(tokens));
+    console.log("💾 Tokens stored successfully");
   }
 
   private clearAuthTokens() {
     this.authTokens = null;
     localStorage.removeItem("auth_tokens");
+    console.log("🗑️ Tokens cleared");
+  }
+
+  private isRefreshTokenExpired(): boolean {
+    if (!this.authTokens?.refresh_token) return true;
+
+    try {
+      const payload = JSON.parse(
+        atob(this.authTokens.refresh_token.split(".")[1])
+      );
+      const isExpired = payload.exp * 1000 < Date.now() + 60000; // 1 minute buffer
+      if (isExpired) {
+        console.log("⏰ Refresh token is expired");
+      }
+      return isExpired;
+    } catch {
+      console.log("🚫 Invalid refresh token format");
+      return true;
+    }
+  }
+
+  async saveItem(request: SaveItemRequest): Promise<SavedItem> {
+    const response = await this.api.post<SavedItem>(
+      "/users/saved-items",
+      request
+    );
+    return response.data;
+  }
+
+  // Remove an item from user's saved list
+  async unsaveItem(
+    itemId: string,
+    itemType: "movie" | "book"
+  ): Promise<{ message: string }> {
+    const response = await this.api.delete<{ message: string }>(
+      `/users/saved-items/${itemId}?item_type=${itemType}`
+    );
+    return response.data;
+  }
+
+  // Get all saved items for the current user
+  async getSavedItems(
+    itemType?: "movie" | "book",
+    skip = 0,
+    limit = 50
+  ): Promise<{
+    items: SavedItem[];
+    total: number;
+    skip: number;
+    limit: number;
+  }> {
+    const params: any = { skip, limit };
+    if (itemType) {
+      params.item_type = itemType;
+    }
+
+    const response = await this.api.get("/users/saved-items", { params });
+    return response.data;
+  }
+
+  // Check if an item is saved
+  async isItemSaved(
+    itemId: string,
+    itemType: "movie" | "book"
+  ): Promise<boolean> {
+    try {
+      const response = await this.api.get(
+        `/users/saved-items/${itemId}/check?item_type=${itemType}`
+      );
+      return response.data.is_saved;
+    } catch (error) {
+      return false;
+    }
   }
 
   private async refreshToken(refreshToken: string): Promise<AuthTokens> {
-    const response = await this.api.post<AuthTokens>("/auth/refresh", {
+    console.log("🔄 Attempting to refresh access token");
+
+    // Create a new axios instance without interceptors for refresh
+    const refreshApi = axios.create({
+      baseURL: this.api.defaults.baseURL,
+      timeout: 10000,
+    });
+
+    const response = await refreshApi.post<AuthTokens>("/auth/refresh", {
       refresh_token: refreshToken,
     });
+
+    console.log("✅ Token refresh successful");
     return response.data;
   }
 
   private handleError(error: AxiosError): Error {
     if (error.response?.data) {
       const apiError = error.response.data as ApiResponse<any>;
-      return new Error(
-        apiError.detail || apiError.message || "An error occurred"
-      );
+      const message =
+        apiError.detail || apiError.message || "An error occurred";
+      console.error("🚫 API Error:", message);
+      return new Error(message);
     } else if (error.request) {
+      console.error("🌐 Network Error:", error.message);
       return new Error("Network error - please check your connection");
     } else {
+      console.error("❌ Request Error:", error.message);
       return new Error("Request failed");
     }
   }
 
   // Authentication methods
   async login(credentials: LoginCredentials): Promise<User> {
-    const response = await this.api.post<AuthTokens>(
-      "/auth/login",
-      credentials
-    );
-    this.setAuthTokens(response.data);
-    const userResponse = await this.getCurrentUser();
-    return userResponse;
+    console.log("🔐 API: Attempting login");
+
+    // Clear any existing tokens before login
+    this.clearAuthTokens();
+
+    const response = await this.api.post<any>("/auth/login", credentials);
+
+    // Handle different response formats
+    let tokens: AuthTokens;
+    let user: User;
+
+    if (response.data.access_token) {
+      // Direct token response
+      tokens = {
+        access_token: response.data.access_token,
+        refresh_token: response.data.refresh_token,
+        token_type: response.data.token_type || "bearer",
+      };
+      this.setAuthTokens(tokens);
+
+      // Get user info
+      user = await this.getCurrentUser();
+    } else {
+      throw new Error("Invalid login response format");
+    }
+
+    console.log("✅ API: Login successful");
+    return user;
   }
 
   async register(data: RegisterData): Promise<User> {
-    const response = await this.api.post<User>("/auth/register", data);
+    console.log("📝 API: Attempting registration");
+
+    // Clear any existing tokens before registration
+    this.clearAuthTokens();
+
+    const response = await this.api.post<any>("/auth/register", data);
+
+    // Handle registration response - may include tokens
+    if (response.data.access_token) {
+      const tokens: AuthTokens = {
+        access_token: response.data.access_token,
+        refresh_token: response.data.refresh_token,
+        token_type: response.data.token_type || "bearer",
+      };
+      this.setAuthTokens(tokens);
+      return response.data.user;
+    }
+
+    console.log("✅ API: Registration successful");
     return response.data;
   }
 
   async logout(): Promise<void> {
     try {
-      await this.api.post("/auth/logout");
+      console.log("👋 API: Logging out");
+      if (this.authTokens) {
+        await this.api.post("/auth/logout");
+      }
+    } catch (error) {
+      console.error("Logout API call failed:", error);
+      // Continue with cleanup even if API call fails
     } finally {
       this.clearAuthTokens();
     }
@@ -249,10 +452,14 @@ class ApiService {
     return response.data;
   }
 
-  // Recommendation methods
-  // Enhanced generateQuestions method for debugging
-  // Add this to your api.ts file in the ApiService class
+  async getQuestionLimits(): Promise<QuestionLimits> {
+    const response = await this.api.get<QuestionLimits>(
+      "/recommendations/limits"
+    );
+    return response.data;
+  }
 
+  // Recommendation methods
   async generateQuestions(request: QuestionGenerationRequest): Promise<{
     recommendation_id: string;
     questions: Question[];
@@ -390,7 +597,7 @@ class ApiService {
 
   // Utility methods
   get isAuthenticated(): boolean {
-    return !!this.authTokens?.access_token;
+    return !!(this.authTokens?.access_token && this.authTokens?.refresh_token);
   }
 
   get currentUser(): User | null {
@@ -417,4 +624,7 @@ export type {
   SubscriptionPlan,
   SubscriptionStatus,
   QuestionGenerationRequest,
+  QuestionLimits,
+  SavedItem,
+  SaveItemRequest,
 };

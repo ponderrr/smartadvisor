@@ -13,7 +13,10 @@ from .recommendation import (
     book_genres,
 )
 
+from ..core.database import Base
+
 __all__ = [
+    "Base",
     "User",
     "Subscription",
     "UserPreferences",

@@ -11,9 +11,12 @@ from app.core.security import (
 )
 from app.crud.user import user_crud
 from app.crud.preferences import preferences_crud
+from app.crud.subscription import subscription_crud
 from app.models.user import User
+from app.models.subscription import Subscription
 from app.schemas.user import UserCreate
 from app.schemas.preferences import UserPreferencesCreate
+from app.schemas.subscription import SubscriptionTier, SubscriptionStatus
 from app.schemas.auth import Token
 import logging
 
@@ -27,7 +30,7 @@ class AuthService:
         self, db: AsyncSession, user_data: UserCreate
     ) -> Dict[str, Any]:
         """
-        Register a new user with default preferences.
+        Register a new user with default preferences and subscription.
 
         Args:
             db: Database session
@@ -39,7 +42,7 @@ class AuthService:
         Raises:
             HTTPException: If email already exists or registration fails
         """
-        # Check if user already exists
+
         existing_user = await user_crud.get_by_email(db, email=user_data.email)
         if existing_user:
             raise HTTPException(
@@ -48,16 +51,23 @@ class AuthService:
             )
 
         try:
-            # Create user
             user = await user_crud.create(db, obj_in=user_data)
 
-            # Create default preferences for user
             default_preferences = UserPreferencesCreate()
             await preferences_crud.create_for_user(
                 db, user_id=user.id, obj_in=default_preferences
             )
 
-            # Generate tokens
+            default_subscription = Subscription(
+                user_id=user.id,
+                tier=SubscriptionTier.FREE,
+                status=SubscriptionStatus.ACTIVE,
+                cancel_at_period_end=False,
+            )
+            db.add(default_subscription)
+            await db.commit()
+            await db.refresh(default_subscription)
+
             access_token = create_access_token(subject=user.id)
             refresh_token = create_refresh_token(subject=user.id)
 
@@ -109,7 +119,17 @@ class AuthService:
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
             )
 
-        # Generate tokens
+        subscription = await subscription_crud.get_by_user_id(db, user_id=user.id)
+        if not subscription:
+            default_subscription = Subscription(
+                user_id=user.id,
+                tier=SubscriptionTier.FREE,
+                status=SubscriptionStatus.ACTIVE,
+                cancel_at_period_end=False,
+            )
+            db.add(default_subscription)
+            await db.commit()
+
         access_token = create_access_token(subject=user.id)
         refresh_token = create_refresh_token(subject=user.id)
 
@@ -151,7 +171,6 @@ class AuthService:
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid user"
             )
 
-        # Create new tokens
         new_access_token = create_access_token(subject=user.id)
         new_refresh_token = create_refresh_token(subject=user.id)
 
@@ -201,14 +220,12 @@ class AuthService:
         Raises:
             HTTPException: If current password is incorrect
         """
-        # Verify current password
         if not verify_password(current_password, user.hashed_password):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Incorrect current password",
             )
 
-        # Update password
         await user_crud.update_password(db, user=user, new_password=new_password)
         logger.info(f"Password changed for user: {user.email}")
         return True
@@ -232,12 +249,9 @@ class AuthService:
                 subject=user.id, expires_delta=timedelta(hours=1)
             )
 
-            # TODO: Send email with reset token
-            # For now, just log it (in production, send via email service)
             logger.info(f"Password reset requested for: {email}")
             logger.info(f"Reset token: {reset_token}")
 
-        # Always return True for security (don't reveal if email exists)
         return True
 
     async def confirm_password_reset(
@@ -272,7 +286,6 @@ class AuthService:
                 detail="Invalid reset token",
             )
 
-        # Update password
         await user_crud.update_password(db, user=user, new_password=new_password)
         logger.info(f"Password reset completed for user: {user.email}")
         return True
@@ -317,5 +330,4 @@ class AuthService:
         return True
 
 
-# Create global auth service instance
 auth_service = AuthService()
