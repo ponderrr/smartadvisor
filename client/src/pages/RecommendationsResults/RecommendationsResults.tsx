@@ -1,4 +1,4 @@
-// Updated RecommendationsResults.tsx with real save functionality
+// Updated RecommendationsResults.tsx with better error handling
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useRecommendations } from "../../context/RecommendationContext";
 import { useAuth } from "../../context/AuthContext";
-import { useSavedItems } from "../../context/SavedItemsContext"; // Add this import
+import { useSavedItems } from "../../context/SavedItemsContext";
 import type {
   MovieRecommendation,
   BookRecommendation,
@@ -40,7 +40,6 @@ const RecommendationsResults: React.FC = () => {
     clearError,
   } = useRecommendations();
 
-  // Replace the local savedItems state with the context
   const {
     saveItem,
     unsaveItem,
@@ -54,6 +53,7 @@ const RecommendationsResults: React.FC = () => {
   useEffect(() => {
     // If we have a recommendationId in URL, load that specific recommendation
     if (recommendationId && recommendationId !== recommendations?.id) {
+      console.log("Loading recommendation from URL:", recommendationId);
       loadRecommendation(recommendationId);
     }
 
@@ -75,7 +75,7 @@ const RecommendationsResults: React.FC = () => {
     clearSaveError();
   }, [clearError, clearSaveError]);
 
-  // Updated save handler with real backend integration
+  // Save handler with real backend integration
   const handleSaveItem = async (
     item: MovieRecommendation | BookRecommendation,
     type: "movie" | "book"
@@ -101,7 +101,6 @@ const RecommendationsResults: React.FC = () => {
         `Failed to ${isItemSaved(item.id) ? "unsave" : "save"} item:`,
         error
       );
-      // Error is handled by the context and displayed in UI if needed
     } finally {
       setIsProcessingSave(null);
     }
@@ -128,7 +127,6 @@ const RecommendationsResults: React.FC = () => {
     } else {
       // Fallback: copy to clipboard
       navigator.clipboard.writeText(`${shareData.title}\n${shareData.url}`);
-      // TODO: Show toast notification
     }
   };
 
@@ -153,8 +151,6 @@ const RecommendationsResults: React.FC = () => {
     if (!pageCount) return "N/A";
     return `${pageCount} pages`;
   };
-
-  // ... (keep all the loading, error, and empty states as before)
 
   if (isLoading) {
     return (
@@ -283,7 +279,8 @@ const RecommendationsResults: React.FC = () => {
                   Your Personalized Recommendations
                 </h1>
                 <p className="results-subtitle">
-                  Based on your preferences, here are {totalRecommendations}{" "}
+                  Based on your preferences, here are{" "}
+                  {totalRecommendations > 0 ? totalRecommendations : "some"}{" "}
                   carefully selected suggestions
                 </p>
               </div>
@@ -318,8 +315,9 @@ const RecommendationsResults: React.FC = () => {
               <h2 className="empty-title">No recommendations generated</h2>
               <p className="empty-message">
                 Our AI couldn't generate recommendations based on your answers.
-                This might be due to very specific or conflicting preferences.
-                Try answering the questions differently for better results.
+                This might be due to very specific or conflicting preferences,
+                or we may be using fallback recommendations. Try answering the
+                questions differently for better results.
               </p>
               <button onClick={handleStartOver} className="btn-primary">
                 <RotateCcw size={20} />
@@ -452,7 +450,43 @@ const RecommendationsResults: React.FC = () => {
             </section>
           )}
 
-          {/* Books Section - Similar structure with save functionality */}
+          {/* Footer Actions */}
+          <div className="results-footer">
+            <div className="footer-content glass">
+              <div className="footer-text">
+                <h3>Love these recommendations?</h3>
+                <p>
+                  Save your favorites and get more personalized suggestions by
+                  answering different questions or exploring new categories.
+                </p>
+              </div>
+              <div className="footer-actions">
+                <button onClick={handleStartOver} className="btn-outline">
+                  <RotateCcw size={20} />
+                  Try Different Questions
+                </button>
+                {!isAuthenticated ? (
+                  <button
+                    onClick={() => navigate("/signup")}
+                    className="btn-primary"
+                  >
+                    <Sparkles size={20} />
+                    Sign Up for More
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => navigate("/account?tab=history")}
+                    className="btn-primary"
+                  >
+                    <Heart size={20} />
+                    View Saved Items
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Books Section */}
           {hasBooks && (
             <section className="recommendations-section">
               <div className="section-header">
@@ -587,42 +621,6 @@ const RecommendationsResults: React.FC = () => {
               </div>
             </section>
           )}
-
-          {/* Footer Actions */}
-          <div className="results-footer">
-            <div className="footer-content glass">
-              <div className="footer-text">
-                <h3>Love these recommendations?</h3>
-                <p>
-                  Save your favorites and get more personalized suggestions by
-                  answering different questions or exploring new categories.
-                </p>
-              </div>
-              <div className="footer-actions">
-                <button onClick={handleStartOver} className="btn-outline">
-                  <RotateCcw size={20} />
-                  Try Different Questions
-                </button>
-                {!isAuthenticated ? (
-                  <button
-                    onClick={() => navigate("/signup")}
-                    className="btn-primary"
-                  >
-                    <Sparkles size={20} />
-                    Sign Up for More
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => navigate("/account?tab=history")}
-                    className="btn-primary"
-                  >
-                    <Heart size={20} />
-                    View Saved Items
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

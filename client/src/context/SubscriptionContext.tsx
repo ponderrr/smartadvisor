@@ -1,5 +1,11 @@
 // client/src/context/SubscriptionContext.tsx
-import React, { createContext, useState, useContext, useEffect } from "react";
+import React, {
+  createContext,
+  useState,
+  useContext,
+  useEffect,
+  useCallback,
+} from "react";
 import type { ReactNode } from "react";
 import { useAuth } from "./AuthContext";
 import api from "../services/api";
@@ -16,6 +22,7 @@ interface SubscriptionState {
   isLoading: boolean;
   error: string | null;
   isProcessingPayment: boolean;
+  isInitialized: boolean; // Add this to prevent loops
 }
 
 interface SubscriptionContextType extends SubscriptionState {
@@ -59,42 +66,28 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
     isLoading: false,
     error: null,
     isProcessingPayment: false,
+    isInitialized: false,
   });
 
-  const setLoading = (isLoading: boolean) => {
+  const setLoading = useCallback((isLoading: boolean) => {
     setState((prev) => ({ ...prev, isLoading }));
-  };
+  }, []);
 
-  const setError = (error: string | null) => {
+  const setError = useCallback((error: string | null) => {
     setState((prev) => ({ ...prev, error }));
-  };
+  }, []);
 
-  const setProcessingPayment = (isProcessingPayment: boolean) => {
+  const setProcessingPayment = useCallback((isProcessingPayment: boolean) => {
     setState((prev) => ({ ...prev, isProcessingPayment }));
-  };
+  }, []);
 
-  const clearError = () => {
+  const clearError = useCallback(() => {
     setError(null);
-  };
+  }, [setError]);
 
-  // Load subscription data when user is authenticated
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      loadSubscriptionData();
-      loadQuestionLimits();
-    } else {
-      // Reset subscription data when user logs out
-      setState((prev) => ({
-        ...prev,
-        currentSubscription: null,
-        availablePlans: [],
-        questionLimits: null,
-        error: null,
-      }));
-    }
-  }, [isAuthenticated, user]);
+  const loadSubscriptionData = useCallback(async (): Promise<void> => {
+    if (!isAuthenticated) return;
 
-  const loadSubscriptionData = async (): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
@@ -108,6 +101,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
         ...prev,
         availablePlans: plansResponse.plans,
         currentSubscription: statusResponse,
+        isInitialized: true,
       }));
     } catch (error) {
       const errorMessage =
@@ -119,78 +113,79 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAuthenticated, setLoading, setError]);
 
-  const loadQuestionLimits = async (): Promise<void> => {
+  const loadQuestionLimits = useCallback(async (): Promise<void> => {
+    if (!isAuthenticated) return;
+
     try {
       const limits = await api.getQuestionLimits();
-      console.log("📊 Loaded question limits:", limits);
-
-      // Validate the limits data
-      if (
-        limits &&
-        typeof limits.current_limit === "number" &&
-        limits.current_limit > 0
-      ) {
-        setState((prev) => ({
-          ...prev,
-          questionLimits: limits,
-        }));
-      } else {
-        console.warn("⚠️ Invalid question limits received, using defaults");
-        // Set default limits if API returns invalid data
-        setState((prev) => ({
-          ...prev,
-          questionLimits: {
-            min_questions: 3,
-            max_questions: isAuthenticated ? 5 : 3,
-            subscription_tier: "free",
-            current_limit: isAuthenticated ? 5 : 3,
-          },
-        }));
-      }
-    } catch (error) {
-      console.error("Failed to load question limits:", error);
-      // Set safe defaults if API call fails
       setState((prev) => ({
         ...prev,
-        questionLimits: {
-          min_questions: 3,
-          max_questions: isAuthenticated ? 5 : 3,
-          subscription_tier: "free",
-          current_limit: isAuthenticated ? 5 : 3,
-        },
+        questionLimits: limits,
       }));
-    }
-  };
-
-  const createSubscription = async (
-    priceId: string
-  ): Promise<{ client_secret: string; subscription_id: string }> => {
-    try {
-      setProcessingPayment(true);
-      setError(null);
-
-      const result = await api.createSubscription(priceId);
-
-      // After successful payment setup, reload subscription data
-      await loadSubscriptionData();
-      await loadQuestionLimits();
-
-      return result;
     } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to create subscription";
-      setError(errorMessage);
-      throw error;
-    } finally {
-      setProcessingPayment(false);
+      console.error("Failed to load question limits:", error);
+      // Don't set error for this as it's not critical
     }
-  };
+  }, [isAuthenticated]);
 
-  const cancelSubscription = async (): Promise<void> => {
+  // Load subscription data when user is authenticated - ONLY ONCE
+  useEffect(() => {
+    if (isAuthenticated && user && !state.isInitialized) {
+      console.log("🔄 Loading subscription data for first time");
+      loadSubscriptionData();
+      loadQuestionLimits();
+    } else if (!isAuthenticated) {
+      // Reset subscription data when user logs out
+      setState({
+        currentSubscription: null,
+        availablePlans: [],
+        questionLimits: null,
+        isLoading: false,
+        error: null,
+        isProcessingPayment: false,
+        isInitialized: false,
+      });
+    }
+  }, [
+    isAuthenticated,
+    user,
+    state.isInitialized,
+    loadSubscriptionData,
+    loadQuestionLimits,
+  ]);
+
+  const createSubscription = useCallback(
+    async (
+      priceId: string
+    ): Promise<{ client_secret: string; subscription_id: string }> => {
+      try {
+        setProcessingPayment(true);
+        setError(null);
+
+        const result = await api.createSubscription(priceId);
+
+        // After successful payment setup, reload subscription data
+        await loadSubscriptionData();
+        await loadQuestionLimits();
+
+        return result;
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Failed to create subscription";
+        setError(errorMessage);
+        throw error;
+      } finally {
+        setProcessingPayment(false);
+      }
+    },
+    [setProcessingPayment, setError, loadSubscriptionData, loadQuestionLimits]
+  );
+
+  const cancelSubscription = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
@@ -210,9 +205,9 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [setLoading, setError, loadSubscriptionData, loadQuestionLimits]);
 
-  const resumeSubscription = async (): Promise<void> => {
+  const resumeSubscription = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
@@ -232,106 +227,85 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [setLoading, setError, loadSubscriptionData, loadQuestionLimits]);
 
-  // Helper functions - Fixed with proper validation and fallbacks
-  const getMaxQuestions = (): number => {
-    // First, try to use question limits from API
-    if (
-      state.questionLimits &&
-      typeof state.questionLimits.current_limit === "number" &&
-      state.questionLimits.current_limit > 0
-    ) {
+  // Helper functions - Updated to use dynamic limits
+  const getMaxQuestions = useCallback((): number => {
+    if (state.questionLimits) {
       return state.questionLimits.current_limit;
     }
 
     // Fallback to subscription-based limits
-    if (state.currentSubscription) {
-      switch (state.currentSubscription.tier) {
-        case "premium-monthly":
-        case "premium-annual":
-          return 15;
-        case "free":
-          return 5;
-        default:
-          return 5;
-      }
+    if (!state.currentSubscription) return 5;
+
+    switch (state.currentSubscription.tier) {
+      case "premium-monthly":
+      case "premium-annual":
+        return 15;
+      case "free":
+      default:
+        return 5;
     }
+  }, [state.questionLimits, state.currentSubscription]);
 
-    // Final fallback based on authentication
-    return isAuthenticated ? 5 : 3;
-  };
-
-  const getMinQuestions = (): number => {
-    if (
-      state.questionLimits &&
-      typeof state.questionLimits.min_questions === "number" &&
-      state.questionLimits.min_questions > 0
-    ) {
+  const getMinQuestions = useCallback((): number => {
+    if (state.questionLimits) {
       return state.questionLimits.min_questions;
     }
-    return 3; // Safe default minimum
-  };
+    return 3; // Default minimum
+  }, [state.questionLimits]);
 
-  const canSelectQuestions = (count: number): boolean => {
-    // Validate input
-    if (!count || isNaN(count) || count < 1) return false;
+  const canSelectQuestions = useCallback(
+    (count: number): boolean => {
+      const min = getMinQuestions();
+      const max = getMaxQuestions();
+      return count >= min && count <= max;
+    },
+    [getMinQuestions, getMaxQuestions]
+  );
 
-    const min = getMinQuestions();
-    const max = getMaxQuestions();
+  const hasFeature = useCallback(
+    (feature: string): boolean => {
+      if (!state.currentSubscription) return false;
 
-    // Ensure min and max are valid numbers
-    if (isNaN(min) || isNaN(max)) return false;
+      const premiumFeatures = [
+        "priority-support",
+        "advanced-analytics",
+        "unlimited-history",
+        "enhanced-recommendations",
+        "early-access",
+      ];
 
-    return count >= min && count <= max;
-  };
+      if (premiumFeatures.includes(feature)) {
+        return ["premium-monthly", "premium-annual"].includes(
+          state.currentSubscription.tier
+        );
+      }
 
-  const hasFeature = (feature: string): boolean => {
-    if (!state.currentSubscription) return false;
+      return true; // Basic features available to all
+    },
+    [state.currentSubscription]
+  );
 
-    const premiumFeatures = [
-      "priority-support",
-      "advanced-analytics",
-      "unlimited-history",
-      "enhanced-recommendations",
-      "early-access",
-    ];
-
-    if (premiumFeatures.includes(feature)) {
-      return ["premium-monthly", "premium-annual"].includes(
-        state.currentSubscription.tier
-      );
-    }
-
-    return true; // Basic features available to all
-  };
-
-  const isFeatureLimited = (): boolean => {
+  const isFeatureLimited = useCallback((): boolean => {
     return (
       !state.currentSubscription || state.currentSubscription.tier === "free"
     );
-  };
+  }, [state.currentSubscription]);
 
-  const getPlanByTier = (tier: string): SubscriptionPlan | undefined => {
-    return state.availablePlans.find((plan) => plan.id === tier);
-  };
+  const getPlanByTier = useCallback(
+    (tier: string): SubscriptionPlan | undefined => {
+      return state.availablePlans.find((plan) => plan.id === tier);
+    },
+    [state.availablePlans]
+  );
 
-  const getCurrentPlan = (): SubscriptionPlan | undefined => {
-    if (!state.currentSubscription) {
-      // Return a default free plan if no subscription
-      return {
-        id: "free",
-        name: "Free Plan",
-        price: 0,
-        currency: "usd",
-        interval: "forever",
-        features: ["Up to 5 questions", "Basic recommendations"],
-      };
-    }
+  const getCurrentPlan = useCallback((): SubscriptionPlan | undefined => {
+    if (!state.currentSubscription) return undefined;
     return getPlanByTier(state.currentSubscription.tier);
-  };
+  }, [state.currentSubscription, getPlanByTier]);
 
-  const getUpgradePlans = (): SubscriptionPlan[] => {
+  const getUpgradePlans = useCallback((): SubscriptionPlan[] => {
     if (!state.currentSubscription) return state.availablePlans;
 
     if (state.currentSubscription.tier === "free") {
@@ -345,10 +319,10 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
     }
 
     return []; // Already on highest tier
-  };
+  }, [state.currentSubscription, state.availablePlans]);
 
-  const getSubscriptionStatusText = (): string => {
-    if (!state.currentSubscription) return "Free Plan";
+  const getSubscriptionStatusText = useCallback((): string => {
+    if (!state.currentSubscription) return "No active subscription";
 
     const { status, cancel_at_period_end, current_period_end } =
       state.currentSubscription;
@@ -370,7 +344,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
       default:
         return "Subscription status unknown";
     }
-  };
+  }, [state.currentSubscription]);
 
   const contextValue: SubscriptionContextType = {
     ...state,
