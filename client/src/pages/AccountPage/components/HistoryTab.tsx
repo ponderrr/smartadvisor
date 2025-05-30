@@ -15,6 +15,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useRecommendations } from "../../../context/RecommendationContext";
+import "./AccountComponents.css";
 
 const HistoryTab: React.FC = () => {
   const navigate = useNavigate();
@@ -27,7 +28,7 @@ const HistoryTab: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "title">("date");
   const [filterBy, setFilterBy] = useState<"all" | "movie" | "book" | "both">(
-    "all"
+    "all",
   );
 
   useEffect(() => {
@@ -236,7 +237,7 @@ const HistoryTab: React.FC = () => {
                 value={filterBy}
                 onChange={(e) =>
                   setFilterBy(
-                    e.target.value as "all" | "movie" | "book" | "both"
+                    e.target.value as "all" | "movie" | "book" | "both",
                   )
                 }
                 className="form-input"
@@ -348,14 +349,14 @@ const HistoryTab: React.FC = () => {
                             type === "movie"
                               ? "rgba(239, 68, 68, 0.1)"
                               : type === "book"
-                              ? "rgba(59, 130, 246, 0.1)"
-                              : "var(--glass-primary)",
+                                ? "rgba(59, 130, 246, 0.1)"
+                                : "var(--glass-primary)",
                           color:
                             type === "movie"
                               ? "#ef4444"
                               : type === "book"
-                              ? "#3b82f6"
-                              : "var(--primary-500)",
+                                ? "#3b82f6"
+                                : "var(--primary-500)",
                           borderRadius: "var(--radius-md)",
                           display: "flex",
                           alignItems: "center",
@@ -407,14 +408,14 @@ const HistoryTab: React.FC = () => {
                                 type === "movie"
                                   ? "rgba(239, 68, 68, 0.1)"
                                   : type === "book"
-                                  ? "rgba(59, 130, 246, 0.1)"
-                                  : "var(--glass-primary)",
+                                    ? "rgba(59, 130, 246, 0.1)"
+                                    : "var(--glass-primary)",
                               color:
                                 type === "movie"
                                   ? "#ef4444"
                                   : type === "book"
-                                  ? "#3b82f6"
-                                  : "var(--primary-600)",
+                                    ? "#3b82f6"
+                                    : "var(--primary-600)",
                               borderRadius: "var(--radius-sm)",
                               fontSize: "var(--text-xs)",
                               fontWeight: "var(--weight-medium)",

@@ -13,6 +13,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useSubscription } from "../../../context/SubscriptionContext";
+import "./AccountComponents.css";
 
 const SubscriptionTab: React.FC = () => {
   const navigate = useNavigate();
@@ -84,40 +85,14 @@ const SubscriptionTab: React.FC = () => {
       )}
 
       {/* Current Plan Status */}
-      <div
-        style={{
-          background: "var(--glass-white)",
-          padding: "var(--space-6)",
-          borderRadius: "var(--radius-lg)",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
-          marginBottom: "var(--space-8)",
-        }}
-      >
-        <h3
-          style={{
-            fontSize: "var(--text-lg)",
-            fontWeight: "var(--weight-semibold)",
-            color: "var(--neutral-800)",
-            marginBottom: "var(--space-6)",
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-2)",
-          }}
-        >
+      <div className="subscription-card">
+        <h3 className="card-title">
           <Crown size={20} />
           Current Plan
         </h3>
 
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "var(--space-6)",
-            flexWrap: "wrap",
-          }}
-        >
-          <div style={{ flex: 1, minWidth: "250px" }}>
+        <div className="subscription-details">
+          <div className="detail-section">
             <div
               style={{
                 display: "flex",
@@ -126,56 +101,20 @@ const SubscriptionTab: React.FC = () => {
                 marginBottom: "var(--space-3)",
               }}
             >
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "var(--space-2)",
-                  padding: "var(--space-2) var(--space-4)",
-                  borderRadius: "var(--radius-full)",
-                  fontSize: "var(--text-sm)",
-                  fontWeight: "var(--weight-semibold)",
-                  background: isLimited
-                    ? "var(--glass-primary)"
-                    : "linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.2))",
-                  color: isLimited ? "var(--primary-600)" : "#d97706",
-                  border: `1px solid ${isLimited ? "rgba(16, 183, 127, 0.2)" : "rgba(251, 191, 36, 0.3)"}`,
-                }}
-              >
+              <span className={`badge ${isLimited ? 'badge-success' : 'badge-warning'}`}>
                 {isLimited ? <Star size={16} /> : <Crown size={16} />}
                 {currentPlan?.name || "Free Plan"}
               </span>
 
-              <span
-                style={{
-                  fontSize: "var(--text-sm)",
-                  color:
-                    currentSubscription?.status === "active"
-                      ? "var(--primary-500)"
-                      : "#ef4444",
-                  fontWeight: "var(--weight-medium)",
-                }}
-              >
+              <span className={`status-badge ${currentSubscription?.status === "active" ? 'status-active' : 'status-inactive'}`}>
                 {statusText}
               </span>
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gap: "var(--space-2)",
-                fontSize: "var(--text-sm)",
-                color: "var(--neutral-600)",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>Questions per session:</span>
-                <span
-                  style={{
-                    fontWeight: "var(--weight-medium)",
-                    color: "var(--neutral-800)",
-                  }}
-                >
+            <div className="subscription-info">
+              <div className="detail-row">
+                <span className="detail-label">Questions per session:</span>
+                <span className="detail-value">
                   {maxQuestions}
                 </span>
               </div>
@@ -219,14 +158,7 @@ const SubscriptionTab: React.FC = () => {
             </div>
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "var(--space-3)",
-              minWidth: "200px",
-            }}
-          >
+          <div className="actions-container">
             {isLimited ? (
               <button
                 onClick={handleUpgrade}
@@ -264,30 +196,8 @@ const SubscriptionTab: React.FC = () => {
                 ) : (
                   <button
                     onClick={() => setShowCancelModal(true)}
-                    style={{
-                      width: "100%",
-                      padding: "var(--space-3) var(--space-4)",
-                      background: "transparent",
-                      border: "2px solid #ef4444",
-                      borderRadius: "var(--radius-md)",
-                      color: "#ef4444",
-                      fontSize: "var(--text-sm)",
-                      fontWeight: "var(--weight-medium)",
-                      cursor: "pointer",
-                      transition: "all var(--transition-normal)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "var(--space-2)",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "#ef4444";
-                      e.currentTarget.style.color = "white";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "transparent";
-                      e.currentTarget.style.color = "#ef4444";
-                    }}
+                    className="btn-cancel"
+
                   >
                     <X size={16} />
                     Cancel Plan
@@ -300,15 +210,7 @@ const SubscriptionTab: React.FC = () => {
       </div>
 
       {/* Plan Features Comparison */}
-      <div
-        style={{
-          background: "var(--glass-white)",
-          padding: "var(--space-6)",
-          borderRadius: "var(--radius-lg)",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
-          marginBottom: "var(--space-8)",
-        }}
-      >
+      <div className="subscription-card">
         <h3
           style={{
             fontSize: "var(--text-lg)",
@@ -321,11 +223,7 @@ const SubscriptionTab: React.FC = () => {
         </h3>
 
         <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: "var(--space-6)",
-          }}
+          className="plans-grid"
         >
           {availablePlans.map((plan) => {
             const isCurrent = currentPlan?.id === plan.id;
@@ -477,14 +375,7 @@ const SubscriptionTab: React.FC = () => {
 
       {/* Billing History Link */}
       {!isLimited && (
-        <div
-          style={{
-            background: "var(--glass-white)",
-            padding: "var(--space-6)",
-            borderRadius: "var(--radius-lg)",
-            border: "1px solid rgba(255, 255, 255, 0.1)",
-          }}
-        >
+        <div className="subscription-card">
           <h3
             style={{
               fontSize: "var(--text-lg)",
@@ -514,33 +405,8 @@ const SubscriptionTab: React.FC = () => {
 
       {/* Cancel Confirmation Modal */}
       {showCancelModal && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            background: "rgba(0, 0, 0, 0.5)",
-            backdropFilter: "blur(8px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
-        >
-          <div
-            style={{
-              maxWidth: "500px",
-              width: "90%",
-              padding: "var(--space-8)",
-              background: "var(--glass-white)",
-              backdropFilter: "blur(16px)",
-              border: "1px solid rgba(255, 255, 255, 0.18)",
-              borderRadius: "var(--radius-xl)",
-              margin: "var(--space-4)",
-            }}
-          >
+        <div className="modal-overlay">
+          <div className="modal-content">
             <h3
               style={{
                 fontSize: "var(--text-xl)",

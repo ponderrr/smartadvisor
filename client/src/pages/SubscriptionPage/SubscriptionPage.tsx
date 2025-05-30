@@ -13,6 +13,12 @@ import {
   X,
   RefreshCw,
 } from "lucide-react";
+import { Button } from "primereact/button";
+import { Card } from "primereact/card";
+import { Dialog } from "primereact/dialog";
+import { Message } from "primereact/message";
+import { ProgressSpinner } from "primereact/progressspinner";
+import { classNames } from "primereact/utils";
 import { useAuth } from "../../context/AuthContext";
 import { useSubscription } from "../../context/SubscriptionContext";
 import "./SubscriptionPage.css";
@@ -108,7 +114,7 @@ const SubscriptionPage: React.FC = () => {
       if (!stripe) {
         // Fallback: redirect to account page with message
         navigate(
-          "/account?tab=subscription&message=Payment processing requires Stripe configuration"
+          "/account?tab=subscription&message=Payment processing requires Stripe configuration",
         );
         return;
       }
@@ -156,24 +162,18 @@ const SubscriptionPage: React.FC = () => {
   if (isLoading && !availablePlans.length) {
     return (
       <div className="subscription-page">
-        <div className="subscription-background">
-          <div className="floating-shapes">
-            <div className="shape shape-1"></div>
-            <div className="shape shape-2"></div>
-            <div className="shape shape-3"></div>
-          </div>
-        </div>
+        <div className="subscription-background"></div>
 
         <div className="container">
-          <div className="loading-card glass">
+          <Card className="loading-card glass">
             <div className="loading-content">
-              <Loader2 className="loading-icon" />
+              <ProgressSpinner />
               <h2 className="loading-title">Loading Subscription Plans</h2>
               <p className="loading-description">
                 Please wait while we fetch the latest pricing...
               </p>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     );
@@ -181,96 +181,32 @@ const SubscriptionPage: React.FC = () => {
 
   return (
     <div className="subscription-page">
-      <div className="subscription-background">
-        <div className="floating-shapes">
-          <div className="shape shape-1"></div>
-          <div className="shape shape-2"></div>
-          <div className="shape shape-3"></div>
-        </div>
-      </div>
+      <div className="subscription-background"></div>
 
       <div className="container">
         <div className="subscription-container">
           {/* Header */}
           <div className="subscription-header">
-            <div className="header-icon glass-primary">
-              <Crown size={32} />
-            </div>
             <h1 className="subscription-title">Choose Your Plan</h1>
             <p className="subscription-subtitle">
               Unlock the full potential of AI-powered recommendations with our
               flexible plans
             </p>
-
-            {/* Current Subscription Status */}
-            {isAuthenticated && currentSubscription && (
-              <div className="current-status glass">
-                <div className="status-content">
-                  <div className="status-info">
-                    <span className="status-label">Current Plan:</span>
-                    <span
-                      className={`status-value ${currentSubscription.tier}`}
-                    >
-                      {currentPlan?.name || "Free Plan"}
-                    </span>
-                  </div>
-                  <div className="status-details">
-                    <span
-                      className={`status-text ${
-                        currentSubscription.status === "active"
-                          ? "active"
-                          : "inactive"
-                      }`}
-                    >
-                      {statusText}
-                    </span>
-                  </div>
-                </div>
-
-                {currentSubscription.cancel_at_period_end && (
-                  <button
-                    onClick={handleResumeSubscription}
-                    className="btn-outline resume-btn"
-                    disabled={isLoading}
-                  >
-                    <RefreshCw size={16} />
-                    Resume Subscription
-                  </button>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Error Display */}
           {(error || stripeError) && (
-            <div className="error-banner">
-              <AlertCircle size={20} />
-              <span>{error || stripeError}</span>
-              <button
-                onClick={() => {
-                  clearError();
-                  setStripeError(null);
-                }}
-                className="error-close"
-              >
-                <X size={16} />
-              </button>
-            </div>
+            <Message
+              severity="error"
+              text={error || stripeError}
+              className="w-full mb-4"
+              closable
+              onClose={() => {
+                clearError();
+                setStripeError(null);
+              }}
+            />
           )}
-
-          {/* Demo Notice */}
-          <div className="auth-notice glass" style={{ marginBottom: "2rem" }}>
-            <div className="notice-content">
-              <Sparkles className="notice-icon" />
-              <div className="notice-text">
-                <h3>Demo Mode</h3>
-                <p>
-                  This is a demonstration. Payment processing is simulated for
-                  development purposes.
-                </p>
-              </div>
-            </div>
-          </div>
 
           {/* Plans Grid */}
           <div className="plans-grid">
@@ -283,11 +219,12 @@ const SubscriptionPage: React.FC = () => {
               const isPopular = plan.id === "premium-annual";
 
               return (
-                <div
+                <Card
                   key={plan.id}
-                  className={`plan-card glass ${isPopular ? "featured" : ""} ${
-                    isCurrentPlan ? "current" : ""
-                  }`}
+                  className={classNames("plan-card glass", {
+                    featured: isPopular,
+                    current: isCurrentPlan,
+                  })}
                 >
                   {isPopular && (
                     <div className="featured-badge">
@@ -329,13 +266,12 @@ const SubscriptionPage: React.FC = () => {
                       <>
                         {currentSubscription?.status === "active" &&
                         !currentSubscription.cancel_at_period_end ? (
-                          <button
+                          <Button
+                            label="Cancel Plan"
                             onClick={() => setShowCancelConfirm(true)}
-                            className="btn-outline cancel-btn"
+                            className="p-button-outlined p-button-danger cancel-btn"
                             disabled={isLoading}
-                          >
-                            Cancel Plan
-                          </button>
+                          />
                         ) : (
                           <div className="current-plan-text">
                             <Check size={16} />
@@ -344,92 +280,79 @@ const SubscriptionPage: React.FC = () => {
                         )}
                       </>
                     ) : (
-                      <button
+                      <Button
                         onClick={() =>
                           handleSelectPlan(plan.id, plan.stripe_price_id)
                         }
-                        className={`plan-button ${
-                          isPopular
-                            ? "btn-primary featured"
-                            : isFree
-                            ? "btn-outline"
-                            : "btn-primary"
-                        }`}
+                        className={classNames("plan-button", {
+                          featured: isPopular,
+                          "p-button-outlined": isFree && !isPopular,
+                        })}
                         disabled={
                           isProcessing ||
                           isLoading ||
                           (!isAuthenticated && !isFree)
                         }
-                      >
-                        {isProcessing ? (
-                          <>
-                            <Loader2 size={16} className="loading-spinner" />
-                            Processing...
-                          </>
-                        ) : isFree ? (
-                          <>
+                        icon={
+                          isProcessing ? (
+                            <Loader2 className="loading-spinner" size={16} />
+                          ) : isFree ? (
                             <Sparkles size={16} />
-                            Get Started Free
-                          </>
-                        ) : isUpgrade ? (
-                          <>
+                          ) : isUpgrade ? (
                             <Zap size={16} />
-                            Upgrade Now
-                          </>
-                        ) : (
-                          <>
+                          ) : (
                             <ArrowRight size={16} />
-                            Select Plan
-                          </>
-                        )}
-                      </button>
+                          )
+                        }
+                        label={
+                          isProcessing
+                            ? "Processing..."
+                            : isFree
+                              ? "Get Started Free"
+                              : isUpgrade
+                                ? "Upgrade Now"
+                                : "Select Plan"
+                        }
+                      />
                     )}
                   </div>
-                </div>
+                </Card>
               );
             })}
           </div>
-
-          {/* Rest of your component remains the same... */}
         </div>
       </div>
 
       {/* Cancel Confirmation Modal */}
-      {showCancelConfirm && (
-        <div className="modal-overlay">
-          <div className="modal-content glass">
-            <h3 className="modal-title">Cancel Subscription?</h3>
-            <p className="modal-description">
-              Are you sure you want to cancel your subscription? You'll lose
-              access to premium features at the end of your current billing
-              period.
-            </p>
-            <div className="modal-actions">
-              <button
-                onClick={() => setShowCancelConfirm(false)}
-                className="btn-outline"
-                disabled={isProcessingCancel}
-              >
-                Keep Subscription
-              </button>
-              <button
-                onClick={handleCancelSubscription}
-                className="btn-primary cancel-confirm"
-                disabled={isProcessingCancel}
-              >
-                {isProcessingCancel ? (
-                  <>
-                    <Loader2 size={16} className="loading-spinner" />
-                    Canceling...
-                  </>
-                ) : (
-                  "Yes, Cancel"
-                )}
-              </button>
-            </div>
+      <Dialog
+        visible={showCancelConfirm}
+        onHide={() => setShowCancelConfirm(false)}
+        header="Cancel Subscription?"
+        modal
+        className="glass"
+        footer={
+          <div className="modal-actions">
+            <Button
+              label="Keep Subscription"
+              onClick={() => setShowCancelConfirm(false)}
+              className="p-button-outlined"
+              disabled={isProcessingCancel}
+            />
+            <Button
+              label={isProcessingCancel ? "Canceling..." : "Yes, Cancel"}
+              onClick={handleCancelSubscription}
+              className="p-button-danger"
+              disabled={isProcessingCancel}
+              icon={isProcessingCancel ? "pi pi-spin pi-spinner" : undefined}
+            />
           </div>
-        </div>
-      )}
+        }
+      >
+        <p className="modal-description">
+          Are you sure you want to cancel your subscription? You'll lose access
+          to premium features at the end of your current billing period.
+        </p>
+      </Dialog>
     </div>
   );
 };

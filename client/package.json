@@ -14,7 +14,11 @@
     "@stripe/stripe-js": "^7.3.0",
     "@tailwindcss/vite": "^4.1.7",
     "axios": "^1.9.0",
+    "chart.js": "^4.4.9",
     "lucide-react": "^0.511.0",
+    "primeicons": "^7.0.0",
+    "primereact": "^10.9.5",
+    "quill": "^2.0.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.0"

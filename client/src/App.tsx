@@ -72,9 +72,9 @@ function AppRoutes() {
   }
 
   return (
-    <div className="app">
+    <div className="app flex flex-column w-full">
       <Navbar />
-      <main className="main-content">
+      <main className="main-content flex-grow-1">
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<HomePage />} />
@@ -148,7 +148,7 @@ function App() {
   React.useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
     const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)"
+      "(prefers-color-scheme: dark)",
     ).matches;
 
     if (savedTheme === "dark" || (!savedTheme && prefersDark)) {

@@ -1,0 +1,962 @@
+/* PrimeReact Account Components Glassmorphism Styles */
+
+/* Base Form Section */
+.form-section {
+    margin-bottom: var(--space-16);
+    font-family: var(--font-sans);
+}
+
+/* Section Headers */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-10);
+    padding-bottom: var(--space-6);
+    border-bottom: 1px solid var(--glass-white);
+}
+
+[data-theme="dark"] .section-header {
+    border-bottom-color: var(--glass-dark);
+}
+
+.section-title {
+    font-size: var(--text-3xl);
+    font-weight: var(--weight-semibold);
+    color: var(--neutral-800);
+}
+
+[data-theme="dark"] .section-title {
+    color: var(--neutral-100);
+}
+
+/* PrimeReact Form Overrides */
+.p-fluid {
+    margin-bottom: var(--space-8);
+}
+
+.p-formgrid {
+    display: grid;
+    gap: var(--space-8);
+}
+
+.p-field {
+    margin-bottom: var(--space-8);
+}
+
+.p-field label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-base);
+    font-weight: var(--weight-medium);
+    color: var(--neutral-700);
+    margin-bottom: var(--space-3);
+}
+
+[data-theme="dark"] .p-field label {
+    color: var(--neutral-300);
+}
+
+/* PrimeReact InputText Styling */
+.p-inputtext {
+    width: 100%;
+    padding: var(--space-5) var(--space-6);
+    background: var(--glass-white);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-lg);
+    color: var(--neutral-800);
+    transition: all var(--transition-normal);
+}
+
+.p-inputtext:focus {
+    outline: none;
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px rgba(16, 183, 127, 0.1);
+    background: var(--glass-white-strong);
+}
+
+.p-inputtext:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.p-inputtext[readonly] {
+    background: var(--glass-white);
+    color: var(--neutral-600);
+    cursor: default;
+}
+
+[data-theme="dark"] .p-inputtext {
+    color: var(--neutral-100);
+    background: var(--glass-dark);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .p-inputtext[readonly] {
+    color: var(--neutral-400);
+}
+
+/* PrimeReact InputNumber Styling */
+.p-inputnumber {
+    width: 100%;
+}
+
+.p-inputnumber .p-inputtext {
+    padding: var(--space-5) var(--space-6);
+    background: var(--glass-white);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-lg);
+}
+
+.p-inputnumber-buttons-stacked .p-button {
+    background: var(--glass-white);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: var(--neutral-600);
+    border-radius: var(--radius-md);
+    margin-left: var(--space-2);
+}
+
+.p-inputnumber-buttons-stacked .p-button:hover {
+    background: var(--glass-white-strong);
+    color: var(--primary-500);
+}
+
+/* PrimeReact Button Styling */
+.p-button {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-6);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-base);
+    font-weight: var(--weight-medium);
+    transition: all var(--transition-normal);
+    border: none;
+}
+
+.p-button-primary {
+    background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+    color: white;
+    box-shadow: var(--shadow-primary);
+}
+
+.p-button-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-primary-hover);
+}
+
+.p-button-secondary {
+    background: var(--glass-white);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: var(--neutral-600);
+}
+
+.p-button-secondary:hover:not(:disabled) {
+    background: var(--glass-white-strong);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(31, 38, 135, 0.2);
+}
+
+.p-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+[data-theme="dark"] .p-button-secondary {
+    background: var(--glass-dark);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--neutral-400);
+}
+
+/* PrimeReact Messages Styling */
+.p-messages {
+    margin-bottom: var(--space-8);
+}
+
+.p-message {
+    padding: var(--space-6);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-4);
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    font-weight: var(--weight-medium);
+    font-size: var(--text-base);
+    backdrop-filter: blur(16px);
+}
+
+.p-message-success {
+    background: linear-gradient(
+        135deg,
+        rgba(16, 183, 127, 0.1),
+        rgba(52, 211, 153, 0.15)
+    );
+    border: 1px solid rgba(16, 183, 127, 0.2);
+    color: var(--primary-600);
+}
+
+.p-message-error {
+    background: linear-gradient(
+        135deg,
+        rgba(239, 68, 68, 0.1),
+        rgba(220, 38, 38, 0.15)
+    );
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: #dc2626;
+}
+
+/* PrimeReact Card Styling */
+.p-card {
+    background: var(--glass-white);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-8);
+    box-shadow: var(--shadow-glass);
+}
+
+.p-card .p-card-title {
+    font-size: var(--text-xl);
+    font-weight: var(--weight-semibold);
+    color: var(--neutral-800);
+    margin-bottom: var(--space-6);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.p-card .p-card-content {
+    padding: var(--space-8);
+}
+
+[data-theme="dark"] .p-card {
+    background: var(--glass-dark);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .p-card .p-card-title {
+    color: var(--neutral-100);
+}
+
+/* PrimeReact Checkbox Styling */
+.p-checkbox {
+    margin-right: var(--space-3);
+}
+
+.p-checkbox .p-checkbox-box {
+    width: 20px;
+    height: 20px;
+    background: var(--glass-white);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-normal);
+}
+
+.p-checkbox .p-checkbox-box:hover {
+    border-color: var(--primary-500);
+    background: var(--glass-white-strong);
+}
+
+.p-checkbox .p-checkbox-box.p-highlight {
+    background: var(--primary-500);
+    border-color: var(--primary-500);
+}
+
+.p-checkbox .p-checkbox-box.p-highlight .p-checkbox-icon {
+    color: white;
+}
+
+.field-checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-normal);
+}
+
+.field-checkbox:hover {
+    background: var(--glass-white);
+}
+
+.field-checkbox label {
+    font-size: var(--text-base);
+    font-weight: var(--weight-medium);
+    color: var(--neutral-700);
+    cursor: pointer;
+    margin: 0;
+}
+
+[data-theme="dark"] .field-checkbox label {
+    color: var(--neutral-300);
+}
+
+[data-theme="dark"] .field-checkbox:hover {
+    background: var(--glass-dark);
+}
+
+/* PrimeReact Dropdown Styling */
+.p-dropdown {
+    width: 100%;
+    background: var(--glass-white);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-lg);
+}
+
+.p-dropdown .p-inputtext {
+    padding: var(--space-5) var(--space-6);
+    background: transparent;
+    border: none;
+    font-size: var(--text-lg);
+    color: var(--neutral-800);
+}
+
+.p-dropdown:not(.p-disabled):hover {
+    border-color: var(--primary-500);
+}
+
+.p-dropdown.p-focus {
+    outline: none;
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px rgba(16, 183, 127, 0.1);
+}
+
+.p-dropdown-panel {
+    background: var(--glass-white);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-glass-hover);
+}
+
+.p-dropdown-items .p-dropdown-item {
+    padding: var(--space-4) var(--space-6);
+    color: var(--neutral-800);
+    transition: all var(--transition-normal);
+}
+
+.p-dropdown-items .p-dropdown-item:hover {
+    background: var(--glass-white-strong);
+    color: var(--primary-500);
+}
+
+[data-theme="dark"] .p-dropdown {
+    background: var(--glass-dark);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .p-dropdown .p-inputtext {
+    color: var(--neutral-100);
+}
+
+[data-theme="dark"] .p-dropdown-panel {
+    background: var(--glass-dark);
+}
+
+[data-theme="dark"] .p-dropdown-items .p-dropdown-item {
+    color: var(--neutral-200);
+}
+
+/* PrimeReact Toast Styling */
+.p-toast .p-toast-message {
+    background: var(--glass-white);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-glass-hover);
+}
+
+.p-toast .p-toast-message.p-toast-message-success {
+    background: linear-gradient(
+        135deg,
+        rgba(16, 183, 127, 0.15),
+        rgba(52, 211, 153, 0.2)
+    );
+    border-color: rgba(16, 183, 127, 0.3);
+}
+
+.p-toast .p-toast-message.p-toast-message-error {
+    background: linear-gradient(
+        135deg,
+        rgba(239, 68, 68, 0.15),
+        rgba(220, 38, 38, 0.2)
+    );
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* PrimeReact ProgressSpinner Styling */
+.p-progress-spinner {
+    color: var(--primary-500);
+}
+
+.p-progress-spinner-svg {
+    width: 48px;
+    height: 48px;
+}
+
+/* Account Information Card Styling */
+.account-info-card {
+    margin-top: var(--space-12);
+    padding: var(--space-8);
+    background: var(--glass-white);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .account-info-card {
+    background: var(--glass-dark);
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+.account-info-card h3 {
+    font-size: var(--text-xl);
+    font-weight: var(--weight-semibold);
+    color: var(--neutral-800);
+    margin-bottom: var(--space-6);
+}
+
+[data-theme="dark"] .account-info-card h3 {
+    color: var(--neutral-100);
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    color: var(--neutral-600);
+    font-weight: var(--weight-medium);
+}
+
+[data-theme="dark"] .info-label {
+    color: var(--neutral-400);
+}
+
+.info-value {
+    color: var(--neutral-800);
+    font-weight: var(--weight-medium);
+}
+
+[data-theme="dark"] .info-value {
+    color: var(--neutral-200);
+}
+
+.info-value.active {
+    color: var(--primary-500);
+}
+
+.info-value.inactive {
+    color: #ef4444;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top: 3px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Small helper text styling */
+.p-field small {
+    color: var(--neutral-500);
+    font-size: var(--text-sm);
+    margin-top: var(--space-2);
+    line-height: 1.4;
+}
+
+[data-theme="dark"] .p-field small {
+    color: var(--neutral-400);
+}
+
+/* Action Buttons Section */
+.p-d-flex {
+    display: flex;
+    align-items: center;
+    padding-top: var(--space-8);
+    margin-top: var(--space-8);
+    border-top: 1px solid var(--glass-white);
+}
+
+[data-theme="dark"] .p-d-flex {
+    border-top-color: var(--glass-dark);
+}
+
+/* Custom spacing utilities for PrimeReact */
+.p-mt-3 {
+    margin-top: var(--space-8) !important;
+}
+
+.p-mb-4 {
+    margin-bottom: var(--space-10) !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .p-formgrid {
+        gap: var(--space-6);
+    }
+
+    .p-field {
+        margin-bottom: var(--space-6);
+    }
+
+    .p-card .p-card-content {
+        padding: var(--space-6);
+    }
+
+    .account-info-card {
+        padding: var(--space-6);
+    }
+
+    .section-header {
+        flex-direction: column;
+        gap: var(--space-4);
+        align-items: flex-start;
+    }
+
+    .p-d-flex {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-4);
+    }
+}
+
+/* Security Tab Styles */
+.security-card {
+    background: var(--glass-white);
+    padding: var(--space-6);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: var(--space-8);
+}
+
+.security-card-title {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+    color: var(--neutral-800);
+    margin-bottom: var(--space-6);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.form-grid {
+    max-width: 500px;
+}
+
+.input-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.input-icon {
+    position: absolute;
+    right: var(--space-3);
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--neutral-500);
+    cursor: pointer;
+    padding: var(--space-2);
+    display: flex;
+    align-items: center;
+}
+
+.input-icon:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.password-strength {
+    margin-top: var(--space-3);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.strength-bar {
+    flex: 1;
+    height: 4px;
+    background: var(--glass-white);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.strength-indicator {
+    height: 100%;
+    border-radius: var(--radius-full);
+    transition: all var(--transition-normal);
+}
+
+.strength-label {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    min-width: 70px;
+    text-align: right;
+}
+
+.security-tips {
+    background: var(--glass-primary);
+    padding: var(--space-6);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(16, 183, 127, 0.2);
+}
+
+.security-tips-title {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+    color: var(--primary-600);
+    margin-bottom: var(--space-4);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.security-tips-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    color: var(--primary-600);
+    font-size: var(--text-sm);
+    line-height: 1.6;
+}
+
+.security-tips-list li {
+    margin-bottom: var(--space-2);
+}
+
+.security-tips-list li:last-child {
+    margin-bottom: 0;
+}
+
+.btn-save {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    background: var(--primary-500);
+    color: white;
+    padding: var(--space-3) var(--space-6);
+    border-radius: var(--radius-lg);
+    border: none;
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+}
+
+.btn-save:hover:not(:disabled) {
+    background: var(--primary-600);
+    transform: translateY(-1px);
+}
+
+.btn-save:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.alert {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-4) var(--space-6);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-4);
+    font-weight: var(--weight-medium);
+}
+
+.alert.success {
+    background: linear-gradient(135deg, rgba(16, 183, 127, 0.1), rgba(52, 211, 153, 0.15));
+    border: 1px solid rgba(16, 183, 127, 0.2);
+    color: var(--primary-600);
+}
+
+.alert.error {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.15));
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: #dc2626;
+}
+
+[data-theme="dark"] .security-card {
+    background: var(--glass-dark);
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .security-card-title {
+    color: var(--neutral-100);
+}
+
+[data-theme="dark"] .input-icon {
+    color: var(--neutral-400);
+}
+
+/* Preferences & Subscription Tab Styles */
+.preferences-section,
+.subscription-section {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.section-title {
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-semibold);
+    color: var(--neutral-800);
+    margin-bottom: var(--space-6);
+}
+
+[data-theme="dark"] .section-title {
+    color: var(--neutral-100);
+}
+
+.preferences-card,
+.subscription-card {
+    background: var(--glass-white);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: var(--space-6);
+    overflow: hidden;
+}
+
+[data-theme="dark"] .preferences-card,
+[data-theme="dark"] .subscription-card {
+    background: var(--glass-dark);
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+.card-header {
+    padding: var(--space-4) var(--space-6);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.card-title {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+    color: var(--neutral-700);
+    margin: 0;
+}
+
+[data-theme="dark"] .card-title {
+    color: var(--neutral-200);
+}
+
+.card-content {
+    padding: var(--space-6);
+}
+
+.field-group {
+    margin-bottom: var(--space-6);
+}
+
+.field-group:last-child {
+    margin-bottom: 0;
+}
+
+.field-label {
+    display: block;
+    font-size: var(--text-base);
+    font-weight: var(--weight-medium);
+    color: var(--neutral-700);
+    margin-bottom: var(--space-2);
+}
+
+[data-theme="dark"] .field-label {
+    color: var(--neutral-300);
+}
+
+.actions-container {
+    display: flex;
+    gap: var(--space-4);
+    margin-top: var(--space-6);
+    flex-direction: column;
+    min-width: 200px;
+}
+
+.subscription-details {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-6);
+    flex-wrap: wrap;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: var(--text-sm);
+    color: var(--neutral-600);
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    color: var(--neutral-600);
+    font-weight: var(--weight-medium);
+}
+
+.detail-value {
+    color: var(--neutral-800);
+    font-weight: var(--weight-semibold);
+}
+
+[data-theme="dark"] .detail-label {
+    color: var(--neutral-400);
+}
+
+[data-theme="dark"] .detail-value {
+    color: var(--neutral-200);
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-full);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+}
+
+.badge-success {
+    background: rgba(16, 183, 127, 0.1);
+    color: var(--primary-600);
+}
+
+.badge-warning {
+    background: rgba(234, 179, 8, 0.1);
+    color: #ca8a04;
+}
+
+.badge-error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+}
+
+.loading-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: var(--space-8);
+}
+
+.detail-section {
+    flex: 1;
+    min-width: 250px;
+}
+
+.subscription-info {
+    display: grid;
+    gap: var(--space-2);
+}
+
+.plans-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-6);
+}
+
+.btn-cancel {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    background: transparent;
+    border: 2px solid #ef4444;
+    border-radius: var(--radius-md);
+    color: #ef4444;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+}
+
+.btn-cancel:hover {
+    background: #ef4444;
+    color: white;
+}
+
+.status-badge {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+}
+
+.status-active {
+    color: var(--primary-500);
+}
+
+.status-inactive {
+    color: #ef4444;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    max-width: 500px;
+    width: 90%;
+    padding: var(--space-8);
+    background: var(--glass-white);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-xl);
+    margin: var(--space-4);
+}
+
+@media (max-width: 480px) {
+    .p-inputtext {
+        padding: var(--space-4);
+        font-size: var(--text-base);
+    }
+
+    .p-button {
+        padding: var(--space-4) var(--space-5);
+    }
+
+    .section-title {
+        font-size: var(--text-2xl);
+    }
+}
