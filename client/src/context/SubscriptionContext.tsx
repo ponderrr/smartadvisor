@@ -1,3 +1,4 @@
+// client/src/context/SubscriptionContext.tsx
 import React, { createContext, useState, useContext, useEffect } from "react";
 import type { ReactNode } from "react";
 import { useAuth } from "./AuthContext";
@@ -123,13 +124,43 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
   const loadQuestionLimits = async (): Promise<void> => {
     try {
       const limits = await api.getQuestionLimits();
-      setState((prev) => ({
-        ...prev,
-        questionLimits: limits,
-      }));
+      console.log("📊 Loaded question limits:", limits);
+
+      // Validate the limits data
+      if (
+        limits &&
+        typeof limits.current_limit === "number" &&
+        limits.current_limit > 0
+      ) {
+        setState((prev) => ({
+          ...prev,
+          questionLimits: limits,
+        }));
+      } else {
+        console.warn("⚠️ Invalid question limits received, using defaults");
+        // Set default limits if API returns invalid data
+        setState((prev) => ({
+          ...prev,
+          questionLimits: {
+            min_questions: 3,
+            max_questions: isAuthenticated ? 5 : 3,
+            subscription_tier: "free",
+            current_limit: isAuthenticated ? 5 : 3,
+          },
+        }));
+      }
     } catch (error) {
       console.error("Failed to load question limits:", error);
-      // Don't set error for this as it's not critical
+      // Set safe defaults if API call fails
+      setState((prev) => ({
+        ...prev,
+        questionLimits: {
+          min_questions: 3,
+          max_questions: isAuthenticated ? 5 : 3,
+          subscription_tier: "free",
+          current_limit: isAuthenticated ? 5 : 3,
+        },
+      }));
     }
   };
 
@@ -203,35 +234,55 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
     }
   };
 
-  // Helper functions - Updated to use dynamic limits
+  // Helper functions - Fixed with proper validation and fallbacks
   const getMaxQuestions = (): number => {
-    if (state.questionLimits) {
+    // First, try to use question limits from API
+    if (
+      state.questionLimits &&
+      typeof state.questionLimits.current_limit === "number" &&
+      state.questionLimits.current_limit > 0
+    ) {
       return state.questionLimits.current_limit;
     }
 
     // Fallback to subscription-based limits
-    if (!state.currentSubscription) return 5;
-
-    switch (state.currentSubscription.tier) {
-      case "premium-monthly":
-      case "premium-annual":
-        return 15;
-      case "free":
-      default:
-        return 5;
+    if (state.currentSubscription) {
+      switch (state.currentSubscription.tier) {
+        case "premium-monthly":
+        case "premium-annual":
+          return 15;
+        case "free":
+          return 5;
+        default:
+          return 5;
+      }
     }
+
+    // Final fallback based on authentication
+    return isAuthenticated ? 5 : 3;
   };
 
   const getMinQuestions = (): number => {
-    if (state.questionLimits) {
+    if (
+      state.questionLimits &&
+      typeof state.questionLimits.min_questions === "number" &&
+      state.questionLimits.min_questions > 0
+    ) {
       return state.questionLimits.min_questions;
     }
-    return 3; // Default minimum
+    return 3; // Safe default minimum
   };
 
   const canSelectQuestions = (count: number): boolean => {
+    // Validate input
+    if (!count || isNaN(count) || count < 1) return false;
+
     const min = getMinQuestions();
     const max = getMaxQuestions();
+
+    // Ensure min and max are valid numbers
+    if (isNaN(min) || isNaN(max)) return false;
+
     return count >= min && count <= max;
   };
 
@@ -266,7 +317,17 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
   };
 
   const getCurrentPlan = (): SubscriptionPlan | undefined => {
-    if (!state.currentSubscription) return undefined;
+    if (!state.currentSubscription) {
+      // Return a default free plan if no subscription
+      return {
+        id: "free",
+        name: "Free Plan",
+        price: 0,
+        currency: "usd",
+        interval: "forever",
+        features: ["Up to 5 questions", "Basic recommendations"],
+      };
+    }
     return getPlanByTier(state.currentSubscription.tier);
   };
 
@@ -287,7 +348,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
   };
 
   const getSubscriptionStatusText = (): string => {
-    if (!state.currentSubscription) return "No active subscription";
+    if (!state.currentSubscription) return "Free Plan";
 
     const { status, cancel_at_period_end, current_period_end } =
       state.currentSubscription;

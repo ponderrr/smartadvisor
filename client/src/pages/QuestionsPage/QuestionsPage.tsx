@@ -32,6 +32,8 @@ const QuestionsPage: React.FC = () => {
     isFeatureLimited,
     currentSubscription,
     loadQuestionLimits,
+    questionLimits,
+    isLoading: subscriptionLoading,
   } = useSubscription();
   const {
     currentSession,
@@ -59,25 +61,66 @@ const QuestionsPage: React.FC = () => {
   const [selectedQuestionCount, setSelectedQuestionCount] = useState<number>(5);
   const [showQuestionSelection, setShowQuestionSelection] = useState(false);
 
-  // Get subscription info
+  // Get subscription info with validation
   const maxQuestions = getMaxQuestions();
   const minQuestions = getMinQuestions();
   const isLimited = isFeatureLimited();
   const planName =
     currentSubscription?.tier === "free" ? "Free Plan" : "Premium Plan";
 
+  // Debug logging
+  useEffect(() => {
+    console.log("🔍 QuestionsPage - Subscription state:", {
+      maxQuestions,
+      minQuestions,
+      isLimited,
+      questionLimits,
+      currentSubscription,
+      subscriptionLoading,
+    });
+  }, [
+    maxQuestions,
+    minQuestions,
+    isLimited,
+    questionLimits,
+    currentSubscription,
+    subscriptionLoading,
+  ]);
+
   // Load question limits when component mounts
   useEffect(() => {
     if (isAuthenticated) {
+      console.log("🔄 Loading question limits...");
       loadQuestionLimits();
     }
   }, [isAuthenticated, loadQuestionLimits]);
 
-  // Set default question count based on limits
+  // Set default question count based on limits with validation
   useEffect(() => {
-    const defaultCount = Math.min(5, maxQuestions);
+    // Wait for subscription data to load before setting defaults
+    if (subscriptionLoading) return;
+
+    // Validate that we have valid numbers
+    if (
+      isNaN(maxQuestions) ||
+      isNaN(minQuestions) ||
+      maxQuestions < 1 ||
+      minQuestions < 1
+    ) {
+      console.warn("⚠️ Invalid question limits, using fallback");
+      setSelectedQuestionCount(5); // Safe fallback
+      return;
+    }
+
+    const defaultCount = Math.max(minQuestions, Math.min(5, maxQuestions));
+    console.log("📊 Setting default question count:", {
+      defaultCount,
+      maxQuestions,
+      minQuestions,
+    });
+
     setSelectedQuestionCount(defaultCount);
-  }, [maxQuestions]);
+  }, [maxQuestions, minQuestions, subscriptionLoading]);
 
   // Reset session when component mounts
   useEffect(() => {
@@ -103,8 +146,20 @@ const QuestionsPage: React.FC = () => {
   };
 
   const handleQuestionCountChange = (count: number) => {
+    // Validate the count before setting
+    if (isNaN(count) || count < 1) {
+      console.warn("⚠️ Invalid question count:", count);
+      return;
+    }
+
     if (canSelectQuestions(count)) {
+      console.log("✅ Setting question count to:", count);
       setSelectedQuestionCount(count);
+    } else {
+      console.warn("⚠️ Cannot select question count:", count, {
+        min: minQuestions,
+        max: maxQuestions,
+      });
     }
   };
 
@@ -113,12 +168,22 @@ const QuestionsPage: React.FC = () => {
       return;
     }
 
+    // Validate question count before starting
+    if (isNaN(selectedQuestionCount) || selectedQuestionCount < 1) {
+      console.error(
+        "❌ Invalid question count for session:",
+        selectedQuestionCount
+      );
+      setSelectedQuestionCount(Math.max(minQuestions, 5)); // Reset to safe value
+      return;
+    }
+
     try {
       setIsStarting(true);
       clearError();
 
       console.log(
-        "Starting session with type:",
+        "🚀 Starting session with type:",
         selectedType,
         "and questions:",
         selectedQuestionCount
@@ -163,6 +228,36 @@ const QuestionsPage: React.FC = () => {
   const progress = getProgress();
   const isLastQuestion =
     currentSession.currentQuestionIndex >= currentSession.questions.length - 1;
+
+  // Show loading screen while subscription data is loading
+  if (subscriptionLoading && !questionLimits) {
+    return (
+      <div className="questions-page">
+        <div className="questions-background">
+          <div className="floating-shapes">
+            <div className="shape shape-1"></div>
+            <div className="shape shape-2"></div>
+            <div className="shape shape-3"></div>
+          </div>
+        </div>
+
+        <div className="container">
+          <div className="loading-card glass">
+            <div className="loading-content">
+              <div className="loading-icon">
+                <Sparkles className="sparkle-icon" />
+                <Loader2 className="loader-icon" />
+              </div>
+              <h2 className="loading-title">Loading Your Account</h2>
+              <p className="loading-description">
+                Checking your subscription and question limits...
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Step 1: Type Selection
   if (!showQuestionSelection && !currentSession.id && !isStarting) {
@@ -211,8 +306,9 @@ const QuestionsPage: React.FC = () => {
                   )}
                 </div>
                 <span className="status-text">
-                  {minQuestions}-{maxQuestions} questions • Enhanced AI
-                  recommendations
+                  {!isNaN(minQuestions) && !isNaN(maxQuestions)
+                    ? `${minQuestions}-${maxQuestions} questions • Enhanced AI recommendations`
+                    : "Loading question limits..."}
                 </span>
               </div>
             </div>
@@ -325,6 +421,16 @@ const QuestionsPage: React.FC = () => {
     !currentSession.id &&
     !isStarting
   ) {
+    // Validate question limits before showing selection
+    const validMin =
+      !isNaN(minQuestions) && minQuestions > 0 ? minQuestions : 3;
+    const validMax =
+      !isNaN(maxQuestions) && maxQuestions > 0 ? maxQuestions : 5;
+    const safeSelectedCount =
+      !isNaN(selectedQuestionCount) && selectedQuestionCount > 0
+        ? selectedQuestionCount
+        : Math.max(validMin, Math.min(5, validMax));
+
     return (
       <div className="questions-page">
         <div className="questions-background">
@@ -354,8 +460,7 @@ const QuestionsPage: React.FC = () => {
             {/* Question Count Selection */}
             <div className="type-selection glass">
               <h2 className="selection-title">
-                Choose your question count ({minQuestions}-{maxQuestions}{" "}
-                available)
+                Choose your question count ({validMin}-{validMax} available)
               </h2>
 
               {error && (
@@ -379,9 +484,9 @@ const QuestionsPage: React.FC = () => {
               >
                 <button
                   onClick={() =>
-                    handleQuestionCountChange(selectedQuestionCount - 1)
+                    handleQuestionCountChange(safeSelectedCount - 1)
                   }
-                  disabled={selectedQuestionCount <= minQuestions}
+                  disabled={safeSelectedCount <= validMin}
                   className="btn-glass"
                   style={{
                     width: "48px",
@@ -413,7 +518,7 @@ const QuestionsPage: React.FC = () => {
                       lineHeight: 1,
                     }}
                   >
-                    {selectedQuestionCount}
+                    {safeSelectedCount}
                   </div>
                   <div
                     style={{
@@ -428,9 +533,9 @@ const QuestionsPage: React.FC = () => {
 
                 <button
                   onClick={() =>
-                    handleQuestionCountChange(selectedQuestionCount + 1)
+                    handleQuestionCountChange(safeSelectedCount + 1)
                   }
-                  disabled={selectedQuestionCount >= maxQuestions}
+                  disabled={safeSelectedCount >= validMax}
                   className="btn-glass"
                   style={{
                     width: "48px",
@@ -456,40 +561,37 @@ const QuestionsPage: React.FC = () => {
                   flexWrap: "wrap",
                 }}
               >
-                {Array.from(
-                  { length: maxQuestions - minQuestions + 1 },
-                  (_, i) => {
-                    const count = minQuestions + i;
-                    return (
-                      <button
-                        key={count}
-                        onClick={() => setSelectedQuestionCount(count)}
-                        className={`btn-glass ${
-                          selectedQuestionCount === count ? "active" : ""
-                        }`}
-                        style={{
-                          minWidth: "48px",
-                          height: "48px",
-                          borderRadius: "var(--radius-md)",
-                          background:
-                            selectedQuestionCount === count
-                              ? "var(--glass-primary)"
-                              : "var(--glass-white)",
-                          color:
-                            selectedQuestionCount === count
-                              ? "var(--primary-600)"
-                              : "var(--neutral-600)",
-                          border:
-                            selectedQuestionCount === count
-                              ? "1px solid rgba(16, 183, 127, 0.3)"
-                              : "1px solid rgba(255, 255, 255, 0.18)",
-                        }}
-                      >
-                        {count}
-                      </button>
-                    );
-                  }
-                )}
+                {Array.from({ length: validMax - validMin + 1 }, (_, i) => {
+                  const count = validMin + i;
+                  return (
+                    <button
+                      key={count}
+                      onClick={() => handleQuestionCountChange(count)}
+                      className={`btn-glass ${
+                        safeSelectedCount === count ? "active" : ""
+                      }`}
+                      style={{
+                        minWidth: "48px",
+                        height: "48px",
+                        borderRadius: "var(--radius-md)",
+                        background:
+                          safeSelectedCount === count
+                            ? "var(--glass-primary)"
+                            : "var(--glass-white)",
+                        color:
+                          safeSelectedCount === count
+                            ? "var(--primary-600)"
+                            : "var(--neutral-600)",
+                        border:
+                          safeSelectedCount === count
+                            ? "1px solid rgba(16, 183, 127, 0.3)"
+                            : "1px solid rgba(255, 255, 255, 0.18)",
+                      }}
+                    >
+                      {count}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Start Button */}
@@ -522,7 +624,7 @@ const QuestionsPage: React.FC = () => {
                     </>
                   ) : (
                     <>
-                      Start {selectedQuestionCount} Questions
+                      Start {safeSelectedCount} Questions
                       <ArrowRight size={20} />
                     </>
                   )}
@@ -573,8 +675,9 @@ const QuestionsPage: React.FC = () => {
               </div>
               <h2 className="loading-title">Generating Your Questions</h2>
               <p className="loading-description">
-                Our AI is creating {selectedQuestionCount} personalized
-                questions based on your preferences...
+                Our AI is creating{" "}
+                {!isNaN(selectedQuestionCount) ? selectedQuestionCount : 5}{" "}
+                personalized questions based on your preferences...
               </p>
               <div className="loading-progress">
                 <div className="progress-bar">
