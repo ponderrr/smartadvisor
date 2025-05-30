@@ -5,6 +5,7 @@ from app.api.v1.endpoints import (
     preferences,
     recommendations,
     subscriptions,
+    saved_items,
 )
 
 api_router = APIRouter()
@@ -20,4 +21,9 @@ api_router.include_router(
 )
 api_router.include_router(
     subscriptions.router, prefix="/subscriptions", tags=["subscriptions"]
+)
+api_router.include_router(
+    saved_items.router, 
+    prefix="/users", 
+    tags=["saved-items"]
 )

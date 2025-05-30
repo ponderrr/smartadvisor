@@ -16,6 +16,7 @@ interface RecommendationState {
     currentQuestionIndex: number;
     answers: Answer[];
     isComplete: boolean;
+    selectedQuestionCount: number; // Add this to track user's choice
   };
   recommendations: RecommendationResponse | null;
   history: Array<{
@@ -66,6 +67,7 @@ export const RecommendationProvider: React.FC<RecommendationProviderProps> = ({
       currentQuestionIndex: 0,
       answers: [],
       isComplete: false,
+      selectedQuestionCount: 5, // Default value
     },
     recommendations: null,
     history: [],
@@ -105,6 +107,17 @@ export const RecommendationProvider: React.FC<RecommendationProviderProps> = ({
 
         console.log("Generated questions response:", response);
 
+        // Validate the response
+        if (
+          !response.recommendation_id ||
+          !response.questions ||
+          response.questions.length === 0
+        ) {
+          throw new Error(
+            "Invalid response from server: missing questions or ID"
+          );
+        }
+
         setState((prev) => ({
           ...prev,
           currentSession: {
@@ -114,6 +127,7 @@ export const RecommendationProvider: React.FC<RecommendationProviderProps> = ({
             currentQuestionIndex: 0,
             answers: [],
             isComplete: false,
+            selectedQuestionCount: numQuestions,
           },
           recommendations: null,
           isLoading: false,
@@ -209,6 +223,21 @@ export const RecommendationProvider: React.FC<RecommendationProviderProps> = ({
 
       console.log("Received recommendations:", recommendations);
 
+      // Validate recommendations response
+      if (!recommendations || !recommendations.id) {
+        throw new Error("Invalid recommendations response from server");
+      }
+
+      // Check if we actually got recommendations
+      const hasMovies =
+        recommendations.movies && recommendations.movies.length > 0;
+      const hasBooks =
+        recommendations.books && recommendations.books.length > 0;
+
+      if (!hasMovies && !hasBooks) {
+        console.warn("No recommendations returned, but continuing...");
+      }
+
       setState((prev) => ({
         ...prev,
         recommendations,
@@ -247,10 +276,11 @@ export const RecommendationProvider: React.FC<RecommendationProviderProps> = ({
           currentSession: {
             id: recommendationId,
             type: recommendations.type,
-            questions: recommendations.questions,
-            currentQuestionIndex: recommendations.questions.length,
+            questions: recommendations.questions || [],
+            currentQuestionIndex: recommendations.questions?.length || 0,
             answers: [], // We don't get the original answers back
             isComplete: true,
+            selectedQuestionCount: recommendations.questions?.length || 5,
           },
           isLoading: false,
         }));
@@ -300,6 +330,7 @@ export const RecommendationProvider: React.FC<RecommendationProviderProps> = ({
         currentQuestionIndex: 0,
         answers: [],
         isComplete: false,
+        selectedQuestionCount: 5,
       },
       recommendations: null,
       error: null,

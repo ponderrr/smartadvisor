@@ -9,6 +9,7 @@ import {
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { RecommendationProvider } from "./context/RecommendationContext";
 import { SubscriptionProvider } from "./context/SubscriptionContext";
+import { SavedItemsProvider } from "./context/SavedItemsContext"; // Add this import
 import { clearInvalidTokens } from "./utils/tokenCleanup";
 import TokenDebug from "./components/debug/TokenDebug";
 
@@ -169,10 +170,12 @@ function App() {
     <Router>
       <AuthProvider>
         <SubscriptionProvider>
-          <RecommendationProvider>
-            <AppRoutes />
-            <TokenDebug />
-          </RecommendationProvider>
+          <SavedItemsProvider>
+            <RecommendationProvider>
+              <AppRoutes />
+              <TokenDebug />
+            </RecommendationProvider>
+          </SavedItemsProvider>
         </SubscriptionProvider>
       </AuthProvider>
     </Router>
