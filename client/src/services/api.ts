@@ -1,4 +1,3 @@
-// client/src/services/api.ts
 import axios from "axios";
 import type { AxiosError, AxiosInstance } from "axios";
 
@@ -7,6 +6,30 @@ declare module "axios" {
   interface InternalAxiosRequestConfig {
     _retry?: boolean;
   }
+}
+
+interface SavedItem {
+  id: string;
+  user_id: string;
+  item_id: string;
+  item_type: "movie" | "book";
+  item_title: string;
+  item_data: any; // Full movie/book data
+  created_at: string;
+}
+
+interface SaveItemRequest {
+  item_id: string;
+  item_type: "movie" | "book";
+  item_title: string;
+  item_data: any;
+}
+
+interface QuestionLimits {
+  min_questions: number;
+  max_questions: number;
+  subscription_tier: string;
+  current_limit: number;
 }
 
 // Backend API Response Types
@@ -263,6 +286,60 @@ class ApiService {
     }
   }
 
+  async saveItem(request: SaveItemRequest): Promise<SavedItem> {
+    const response = await this.api.post<SavedItem>(
+      "/users/saved-items",
+      request
+    );
+    return response.data;
+  }
+
+  // Remove an item from user's saved list
+  async unsaveItem(
+    itemId: string,
+    itemType: "movie" | "book"
+  ): Promise<{ message: string }> {
+    const response = await this.api.delete<{ message: string }>(
+      `/users/saved-items/${itemId}?item_type=${itemType}`
+    );
+    return response.data;
+  }
+
+  // Get all saved items for the current user
+  async getSavedItems(
+    itemType?: "movie" | "book",
+    skip = 0,
+    limit = 50
+  ): Promise<{
+    items: SavedItem[];
+    total: number;
+    skip: number;
+    limit: number;
+  }> {
+    const params: any = { skip, limit };
+    if (itemType) {
+      params.item_type = itemType;
+    }
+
+    const response = await this.api.get("/users/saved-items", { params });
+    return response.data;
+  }
+
+  // Check if an item is saved
+  async isItemSaved(
+    itemId: string,
+    itemType: "movie" | "book"
+  ): Promise<boolean> {
+    try {
+      const response = await this.api.get(
+        `/users/saved-items/${itemId}/check?item_type=${itemType}`
+      );
+      return response.data.is_saved;
+    } catch (error) {
+      return false;
+    }
+  }
+
   private async refreshToken(refreshToken: string): Promise<AuthTokens> {
     console.log("🔄 Attempting to refresh access token");
 
@@ -372,6 +449,13 @@ class ApiService {
 
   async updateCurrentUser(data: Partial<User>): Promise<User> {
     const response = await this.api.put<User>("/users/me", data);
+    return response.data;
+  }
+
+  async getQuestionLimits(): Promise<QuestionLimits> {
+    const response = await this.api.get<QuestionLimits>(
+      "/recommendations/limits"
+    );
     return response.data;
   }
 
@@ -540,4 +624,7 @@ export type {
   SubscriptionPlan,
   SubscriptionStatus,
   QuestionGenerationRequest,
+  QuestionLimits,
+  SavedItem,
+  SaveItemRequest,
 };

@@ -1,3 +1,4 @@
+// Updated RecommendationsResults.tsx with real save functionality
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -14,10 +15,16 @@ import {
   Book,
   BookOpen,
   Play,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { useRecommendations } from "../../context/RecommendationContext";
 import { useAuth } from "../../context/AuthContext";
-import type { MovieRecommendation, BookRecommendation } from "../../services/api";
+import { useSavedItems } from "../../context/SavedItemsContext"; // Add this import
+import type {
+  MovieRecommendation,
+  BookRecommendation,
+} from "../../services/api";
 import "./RecommendationsResults.css";
 
 const RecommendationsResults: React.FC = () => {
@@ -33,7 +40,16 @@ const RecommendationsResults: React.FC = () => {
     clearError,
   } = useRecommendations();
 
-  const [savedItems, setSavedItems] = useState<Set<string>>(new Set());
+  // Replace the local savedItems state with the context
+  const {
+    saveItem,
+    unsaveItem,
+    isItemSaved,
+    error: saveError,
+    clearError: clearSaveError,
+  } = useSavedItems();
+
+  const [isProcessingSave, setIsProcessingSave] = useState<string | null>(null);
 
   useEffect(() => {
     // If we have a recommendationId in URL, load that specific recommendation
@@ -43,6 +59,7 @@ const RecommendationsResults: React.FC = () => {
 
     // If no recommendations and no loading, redirect to questions
     if (!recommendations && !isLoading && !recommendationId) {
+      console.log("No recommendations found, redirecting to questions");
       navigate("/questions", { replace: true });
     }
   }, [
@@ -55,26 +72,44 @@ const RecommendationsResults: React.FC = () => {
 
   useEffect(() => {
     clearError();
-  }, [clearError]);
+    clearSaveError();
+  }, [clearError, clearSaveError]);
 
-  const handleSaveItem = (itemId: string) => {
-    setSavedItems((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(itemId)) {
-        newSet.delete(itemId);
+  // Updated save handler with real backend integration
+  const handleSaveItem = async (
+    item: MovieRecommendation | BookRecommendation,
+    type: "movie" | "book"
+  ) => {
+    if (!isAuthenticated) {
+      navigate("/signin");
+      return;
+    }
+
+    try {
+      setIsProcessingSave(item.id);
+      clearSaveError();
+
+      if (isItemSaved(item.id)) {
+        await unsaveItem(item.id, type);
+        console.log(`✅ Unsaved ${type}: ${item.title}`);
       } else {
-        newSet.add(itemId);
+        await saveItem(item, type);
+        console.log(`💾 Saved ${type}: ${item.title}`);
       }
-      return newSet;
-    });
-
-    // TODO: Implement actual save to backend
-    console.log("Save item:", itemId);
+    } catch (error) {
+      console.error(
+        `Failed to ${isItemSaved(item.id) ? "unsave" : "save"} item:`,
+        error
+      );
+      // Error is handled by the context and displayed in UI if needed
+    } finally {
+      setIsProcessingSave(null);
+    }
   };
 
   const handleShare = async (
     item: MovieRecommendation | BookRecommendation,
-    type: "movie" | "book",
+    type: "movie" | "book"
   ) => {
     const shareData = {
       title: `Check out this ${type} recommendation: ${item.title}`,
@@ -119,6 +154,8 @@ const RecommendationsResults: React.FC = () => {
     return `${pageCount} pages`;
   };
 
+  // ... (keep all the loading, error, and empty states as before)
+
   if (isLoading) {
     return (
       <div className="results-page">
@@ -135,6 +172,7 @@ const RecommendationsResults: React.FC = () => {
             <div className="loading-content">
               <div className="loading-icon">
                 <Sparkles className="sparkle-icon" />
+                <Loader2 className="loader-icon" />
               </div>
               <h2 className="loading-title">Loading Your Recommendations</h2>
               <p className="loading-description">
@@ -150,8 +188,19 @@ const RecommendationsResults: React.FC = () => {
   if (error) {
     return (
       <div className="results-page">
+        <div className="results-background">
+          <div className="floating-shapes">
+            <div className="shape shape-1"></div>
+            <div className="shape shape-2"></div>
+            <div className="shape shape-3"></div>
+          </div>
+        </div>
         <div className="container">
           <div className="error-card glass">
+            <AlertCircle
+              size={48}
+              style={{ color: "#ef4444", marginBottom: "1.5rem" }}
+            />
             <h2 className="error-title">Something went wrong</h2>
             <p className="error-message">{error}</p>
             <div className="error-actions">
@@ -159,6 +208,7 @@ const RecommendationsResults: React.FC = () => {
                 onClick={() => navigate("/questions")}
                 className="btn-primary"
               >
+                <RotateCcw size={20} />
                 Try Again
               </button>
               <button onClick={() => navigate("/")} className="btn-glass">
@@ -174,8 +224,19 @@ const RecommendationsResults: React.FC = () => {
   if (!recommendations) {
     return (
       <div className="results-page">
+        <div className="results-background">
+          <div className="floating-shapes">
+            <div className="shape shape-1"></div>
+            <div className="shape shape-2"></div>
+            <div className="shape shape-3"></div>
+          </div>
+        </div>
         <div className="container">
           <div className="empty-card glass">
+            <Sparkles
+              size={48}
+              style={{ color: "var(--primary-500)", marginBottom: "1.5rem" }}
+            />
             <h2 className="empty-title">No recommendations found</h2>
             <p className="empty-message">
               Let's get you some personalized suggestions!
@@ -184,6 +245,7 @@ const RecommendationsResults: React.FC = () => {
               onClick={() => navigate("/questions")}
               className="btn-primary"
             >
+              <Sparkles size={20} />
               Get Recommendations
             </button>
           </div>
@@ -194,6 +256,9 @@ const RecommendationsResults: React.FC = () => {
 
   const hasMovies = recommendations.movies && recommendations.movies.length > 0;
   const hasBooks = recommendations.books && recommendations.books.length > 0;
+  const totalRecommendations =
+    (recommendations.movies?.length || 0) +
+    (recommendations.books?.length || 0);
 
   return (
     <div className="results-page">
@@ -218,10 +283,7 @@ const RecommendationsResults: React.FC = () => {
                   Your Personalized Recommendations
                 </h1>
                 <p className="results-subtitle">
-                  Based on your preferences, here are{" "}
-                  {recommendations.movies?.length ||
-                    0 + recommendations.books?.length ||
-                    0}{" "}
+                  Based on your preferences, here are {totalRecommendations}{" "}
                   carefully selected suggestions
                 </p>
               </div>
@@ -234,6 +296,37 @@ const RecommendationsResults: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {/* Save Error Display */}
+          {saveError && (
+            <div className="error-banner" style={{ marginBottom: "2rem" }}>
+              <AlertCircle size={20} />
+              <span>Save Error: {saveError}</span>
+              <button onClick={clearSaveError} className="error-close">
+                ×
+              </button>
+            </div>
+          )}
+
+          {/* Show message if no recommendations */}
+          {!hasMovies && !hasBooks && (
+            <div className="empty-card glass" style={{ marginBottom: "2rem" }}>
+              <AlertCircle
+                size={48}
+                style={{ color: "var(--primary-500)", marginBottom: "1.5rem" }}
+              />
+              <h2 className="empty-title">No recommendations generated</h2>
+              <p className="empty-message">
+                Our AI couldn't generate recommendations based on your answers.
+                This might be due to very specific or conflicting preferences.
+                Try answering the questions differently for better results.
+              </p>
+              <button onClick={handleStartOver} className="btn-primary">
+                <RotateCcw size={20} />
+                Try Different Answers
+              </button>
+            </div>
+          )}
 
           {/* Movies Section */}
           {hasMovies && (
@@ -263,6 +356,9 @@ const RecommendationsResults: React.FC = () => {
                             alt={`${movie.title} poster`}
                             className="poster-image"
                             loading="lazy"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = "none";
+                            }}
                           />
                           <div className="poster-overlay">
                             <Play size={48} />
@@ -271,15 +367,22 @@ const RecommendationsResults: React.FC = () => {
                       )}
                       <div className="card-actions">
                         <button
-                          onClick={() => handleSaveItem(movie.id)}
-                          className={`action-btn ${savedItems.has(movie.id) ? "saved" : ""}`}
+                          onClick={() => handleSaveItem(movie, "movie")}
+                          className={`action-btn ${
+                            isItemSaved(movie.id) ? "saved" : ""
+                          }`}
+                          disabled={isProcessingSave === movie.id}
                           title={
-                            savedItems.has(movie.id)
+                            isItemSaved(movie.id)
                               ? "Remove from saved"
                               : "Save for later"
                           }
                         >
-                          <Heart size={20} />
+                          {isProcessingSave === movie.id ? (
+                            <Loader2 size={20} className="loading-spinner" />
+                          ) : (
+                            <Heart size={20} />
+                          )}
                         </button>
                         <button
                           onClick={() => handleShare(movie, "movie")}
@@ -349,7 +452,7 @@ const RecommendationsResults: React.FC = () => {
             </section>
           )}
 
-          {/* Books Section */}
+          {/* Books Section - Similar structure with save functionality */}
           {hasBooks && (
             <section className="recommendations-section">
               <div className="section-header">
@@ -368,7 +471,10 @@ const RecommendationsResults: React.FC = () => {
                     key={book.id}
                     className="recommendation-card glass"
                     style={{
-                      animationDelay: `${(hasMovies ? recommendations.movies!.length : 0) + index * 0.1}s`,
+                      animationDelay: `${
+                        (hasMovies ? recommendations.movies!.length : 0) +
+                        index * 0.1
+                      }s`,
                     }}
                   >
                     <div className="card-header">
@@ -379,6 +485,9 @@ const RecommendationsResults: React.FC = () => {
                             alt={`${book.title} cover`}
                             className="poster-image"
                             loading="lazy"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = "none";
+                            }}
                           />
                           <div className="poster-overlay">
                             <BookOpen size={48} />
@@ -387,15 +496,22 @@ const RecommendationsResults: React.FC = () => {
                       )}
                       <div className="card-actions">
                         <button
-                          onClick={() => handleSaveItem(book.id)}
-                          className={`action-btn ${savedItems.has(book.id) ? "saved" : ""}`}
+                          onClick={() => handleSaveItem(book, "book")}
+                          className={`action-btn ${
+                            isItemSaved(book.id) ? "saved" : ""
+                          }`}
+                          disabled={isProcessingSave === book.id}
                           title={
-                            savedItems.has(book.id)
+                            isItemSaved(book.id)
                               ? "Remove from saved"
                               : "Save for later"
                           }
                         >
-                          <Heart size={20} />
+                          {isProcessingSave === book.id ? (
+                            <Loader2 size={20} className="loading-spinner" />
+                          ) : (
+                            <Heart size={20} />
+                          )}
                         </button>
                         <button
                           onClick={() => handleShare(book, "book")}
@@ -478,8 +594,8 @@ const RecommendationsResults: React.FC = () => {
               <div className="footer-text">
                 <h3>Love these recommendations?</h3>
                 <p>
-                  Get more personalized suggestions by answering different
-                  questions or exploring new categories.
+                  Save your favorites and get more personalized suggestions by
+                  answering different questions or exploring new categories.
                 </p>
               </div>
               <div className="footer-actions">
@@ -487,13 +603,21 @@ const RecommendationsResults: React.FC = () => {
                   <RotateCcw size={20} />
                   Try Different Questions
                 </button>
-                {!isAuthenticated && (
+                {!isAuthenticated ? (
                   <button
                     onClick={() => navigate("/signup")}
                     className="btn-primary"
                   >
                     <Sparkles size={20} />
                     Sign Up for More
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => navigate("/account?tab=history")}
+                    className="btn-primary"
+                  >
+                    <Heart size={20} />
+                    View Saved Items
                   </button>
                 )}
               </div>
