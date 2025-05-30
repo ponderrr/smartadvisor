@@ -1,21 +1,30 @@
 // client/src/components/layout/Navbar/index.tsx
-import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Moon, Sun, Sparkles, Menu, X } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Menu, X } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
-import "./Navbar.css"; // Keep only one CSS import
+import { Button } from "primereact/button";
+import { Menu as PrimeMenu } from "primereact/menu";
+import { Avatar } from "primereact/avatar";
+import { classNames } from "primereact/utils";
+import { Badge } from "primereact/badge";
+import logo from "../../../assets/smartadvisor.svg";
+import "./Navbar.css";
+import { TieredMenu } from "primereact/tieredmenu";
 
 const Navbar: React.FC = () => {
+  const navigate = useNavigate();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, isAuthenticated, logout, isLoading } = useAuth();
   const location = useLocation();
+  const menu = useRef<TieredMenu>(null);
 
   useEffect(() => {
     // Check for saved theme preference
     const savedTheme = localStorage.getItem("theme");
     const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)"
+      "(prefers-color-scheme: dark)",
     ).matches;
 
     if (savedTheme === "dark" || (!savedTheme && prefersDark)) {
@@ -65,20 +74,17 @@ const Navbar: React.FC = () => {
         <div className="navbar-content">
           {/* Logo Section */}
           <Link to="/" className="logo-section" onClick={closeMenu}>
-            <div className="logo-icon glass-primary">
-              <Sparkles size={24} />
-            </div>
-            <span className="logo-text">SmartAdvisor</span>
+            <img src={logo} alt="SmartAdvisor Logo" className="logo-image" />
             <span className="beta-badge">BETA</span>
           </Link>
 
           {/* Desktop Navigation */}
           <nav className="nav-desktop">
             <Link
-              to="/"
-              className={`nav-link ${isActivePage("/") ? "active" : ""}`}
+              to="/subscription"
+              className={`nav-link ${isActivePage("/subscription") ? "active" : ""}`}
             >
-              Home
+              Plans
             </Link>
             {isAuthenticated ? (
               <>
@@ -90,39 +96,31 @@ const Navbar: React.FC = () => {
                 >
                   Get Recommendations
                 </Link>
-                <Link
-                  to="/account"
-                  className={`nav-link ${
-                    location.pathname.startsWith("/account") ? "active" : ""
-                  }`}
-                >
-                  My Account
-                </Link>
               </>
-            ) : (
-              <Link to="/signin" className="nav-link">
-                Get Started
-              </Link>
-            )}
+            ) : null}
           </nav>
 
           {/* Desktop Actions */}
           <div className="navbar-actions">
-            <button
+            <Button
               onClick={toggleTheme}
-              className="theme-toggle glass"
+              className="theme-toggle p-button-text"
               aria-label="Toggle theme"
-              style={{
-                background: "rgba(255, 255, 255, 0.1)",
-                border: "1px solid rgba(255, 255, 255, 0.2)",
-                borderRadius: "8px",
-                padding: "8px",
-                color: "white",
-                cursor: "pointer",
-              }}
-            >
-              {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-            </button>
+              rounded
+              icon={
+                isDarkMode ? (
+                  <i
+                    className="pi pi-sun sun-icon"
+                    style={{ fontSize: "1.25rem" }}
+                  />
+                ) : (
+                  <i
+                    className="pi pi-moon moon-icon"
+                    style={{ fontSize: "1.25rem" }}
+                  />
+                )
+              }
+            />
 
             {isLoading ? (
               <div className="auth-loading">
@@ -130,105 +128,135 @@ const Navbar: React.FC = () => {
               </div>
             ) : isAuthenticated ? (
               <div className="user-menu">
-                <div
-                  className="user-info glass"
-                  style={{
-                    background: "rgba(255, 255, 255, 0.1)",
-                    border: "1px solid rgba(255, 255, 255, 0.2)",
-                    borderRadius: "8px",
-                    padding: "8px 16px",
-                  }}
+                <Button
+                  className="p-button-text user-profile-btn"
+                  onClick={(e) => menu.current?.toggle(e)}
+                  aria-controls="profile-menu"
+                  aria-haspopup
                 >
-                  <div className="user-avatar">
-                    {user?.profile_picture_url ? (
-                      <img
-                        src={user.profile_picture_url}
-                        alt={user.username || "User"}
-                        className="avatar-image"
-                      />
-                    ) : (
-                      <span className="avatar-text">
-                        {(user?.username || user?.email || "U")
-                          .charAt(0)
-                          .toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-                  <div className="user-details">
-                    <span className="user-name">
-                      {user?.username || "User"}
-                    </span>
-                    <span className="user-email">{user?.email}</span>
-                  </div>
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="btn-outline logout-btn"
-                  style={{
-                    background: "transparent",
-                    border: "2px solid #10b77f",
-                    color: "#10b77f",
-                    borderRadius: "8px",
-                    padding: "8px 16px",
-                    cursor: "pointer",
-                  }}
-                >
-                  Sign Out
-                </button>
+                  <Avatar
+                    image={user?.profile_picture_url}
+                    label={(user?.username || user?.email || "U")
+                      .charAt(0)
+                      .toUpperCase()}
+                    shape="circle"
+                    size="normal"
+                    style={{ backgroundColor: "#00955f", color: "#ffffff" }}
+                  />
+                  <span className="username-text">
+                    {user?.username || "User"}
+                  </span>
+                  <i
+                    className="pi pi-angle-down"
+                    style={{ marginLeft: "0.5rem" }}
+                  ></i>
+                </Button>
+                <PrimeMenu
+                  model={[
+                    {
+                      template: (item, options) => {
+                        return (
+                          <button
+                            onClick={(e) => options.onClick(e)}
+                            className={classNames(
+                              options.className,
+                              "w-full p-link flex align-items-center p-3 pl-4 text-color hover:surface-200 border-noround",
+                            )}
+                          >
+                            <Avatar
+                              image={user?.profile_picture_url}
+                              label={(user?.username || user?.email || "U")
+                                .charAt(0)
+                                .toUpperCase()}
+                              shape="circle"
+                              size="large"
+                              style={{
+                                backgroundColor: "#00955f",
+                                color: "#ffffff",
+                              }}
+                              className="mr-2"
+                            />
+                            <div className="flex flex-column" style={{ marginLeft: '0.75rem' }}>
+                              <span className="font-bold" style={{ marginBottom: '0.25rem' }}>
+                                {user?.username || "User"}
+                              </span>
+                              <span className="text-sm text-500">{user?.email}</span>
+                            </div>
+                          </button>
+                        );
+                      },
+                    },
+                    { separator: true },
+                    {
+                      label: "My Profile",
+                      command: () => navigate("/account/profile?tab=profile"),
+                    },
+                    {
+                      label: "Settings",
+                      command: () => navigate("/account/settings"),
+                    },
+                    {
+                      label: "My Recommendations",
+                      command: () => navigate("/account?tab=history"),
+                    },
+                    { separator: true },
+                    {
+                      label: "Sign Out",
+                      command: () => handleLogout(),
+                    },
+                  ]}
+                  popup
+                  ref={menu}
+                  id="profile-menu"
+                />
               </div>
             ) : (
               <div
                 className="auth-buttons"
                 style={{ display: "flex", gap: "12px" }}
               >
-                <Link
-                  to="/signin"
-                  className="btn-glass"
-                  style={{
-                    background: "rgba(255, 255, 255, 0.1)",
-                    border: "1px solid rgba(255, 255, 255, 0.2)",
-                    borderRadius: "8px",
-                    padding: "8px 16px",
-                    color: "white",
-                    textDecoration: "none",
-                  }}
-                >
-                  Sign In
+                <Link to="/signin">
+                  <Button
+                    className="p-button-text"
+                    size="large"
+                    style={{
+                      fontSize: "1.1rem",
+                      padding: "0.5rem 1.5rem",
+                    }}
+                    pt={{
+                      root: { style: { background: "transparent" } },
+                      label: { style: { fontWeight: 500 } },
+                    }}
+                    label="Sign In"
+                  />
                 </Link>
-                <Link
-                  to="/signup"
-                  className="btn-primary"
-                  style={{
-                    background: "linear-gradient(135deg, #10b77f, #059669)",
-                    border: "none",
-                    borderRadius: "8px",
-                    padding: "8px 16px",
-                    color: "white",
-                    textDecoration: "none",
-                  }}
-                >
-                  Sign Up
+                <Link to="/signup">
+                  <Button
+                    size="large"
+                    style={{
+                      fontSize: "1.1rem",
+                      backgroundColor: "#00955f",
+                      border: "1px solid #00955f",
+                      padding: "0.5rem 1.5rem",
+                    }}
+                    pt={{
+                      root: { style: { background: "#00955f" } },
+                      label: { style: { fontWeight: 500 } },
+                    }}
+                    label="Sign Up"
+                  />
                 </Link>
               </div>
             )}
 
             {/* Mobile Menu Button */}
-            <button
+            <Button
               onClick={toggleMenu}
-              className="mobile-menu-button glass"
+              className="mobile-menu-button p-button-text"
               aria-label="Toggle menu"
-              style={{
-                display: "none",
-                background: "rgba(255, 255, 255, 0.1)",
-                border: "1px solid rgba(255, 255, 255, 0.2)",
-                borderRadius: "8px",
-                padding: "8px",
-                color: "white",
-                cursor: "pointer",
-              }}
-            >
-              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+              rounded
+              icon={isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            />
           </div>
         </div>
 
@@ -250,9 +278,9 @@ const Navbar: React.FC = () => {
           >
             <div className="mobile-nav-content">
               <Link
-                to="/"
+                to="/subscription"
                 className={`mobile-nav-link ${
-                  isActivePage("/") ? "active" : ""
+                  isActivePage("/subscription") ? "active" : ""
                 }`}
                 onClick={closeMenu}
                 style={{
@@ -262,12 +290,12 @@ const Navbar: React.FC = () => {
                   textDecoration: "none",
                   borderRadius: "8px",
                   marginBottom: "8px",
-                  background: isActivePage("/")
+                  background: isActivePage("/subscription")
                     ? "rgba(16, 183, 127, 0.2)"
                     : "transparent",
                 }}
               >
-                Home
+                Plans
               </Link>
               {/* Add other mobile nav links with similar styling */}
             </div>

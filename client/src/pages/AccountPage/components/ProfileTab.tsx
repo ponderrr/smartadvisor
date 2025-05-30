@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Edit,
   Save,
@@ -10,8 +10,13 @@ import {
   Mail,
   User,
 } from "lucide-react";
+import { InputText } from "primereact/inputtext";
+import { InputNumber } from "primereact/inputnumber";
+import { Button } from "primereact/button";
+import { Messages } from "primereact/messages";
 import { useAuth } from "../../../context/AuthContext";
 import api from "../../../services/api";
+import "./AccountComponents.css";
 
 interface ProfileData {
   username: string;
@@ -22,13 +27,12 @@ const ProfileTab: React.FC = () => {
   const { user, refreshUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-
   const [profileData, setProfileData] = useState<ProfileData>({
     username: "",
     age: "",
   });
+
+  const messagesRef = useRef<any>(null);
 
   // Initialize form data when user data loads
   useEffect(() => {
@@ -42,20 +46,26 @@ const ProfileTab: React.FC = () => {
 
   const handleInputChange = (field: keyof ProfileData, value: string) => {
     setProfileData((prev) => ({ ...prev, [field]: value }));
-    setError(null);
+    messagesRef.current?.clear();
   };
 
   const validateForm = (): boolean => {
     if (profileData.username.trim().length < 3) {
-      setError("Username must be at least 3 characters long");
+      messagesRef.current?.show({
+        severity: "error",
+        summary: "Validation Error",
+        detail: "Username must be at least 3 characters long",
+      });
       return false;
     }
 
-    if (
-      profileData.age &&
-      (parseInt(profileData.age) < 13 || parseInt(profileData.age) > 120)
-    ) {
-      setError("Age must be between 13 and 120");
+    const ageNum = parseInt(profileData.age);
+    if (profileData.age && (ageNum < 13 || ageNum > 120)) {
+      messagesRef.current?.show({
+        severity: "error",
+        summary: "Validation Error",
+        detail: "Age must be between 13 and 120",
+      });
       return false;
     }
 
@@ -67,7 +77,7 @@ const ProfileTab: React.FC = () => {
 
     try {
       setIsLoading(true);
-      setError(null);
+      messagesRef.current?.clear();
 
       await api.updateCurrentUser({
         username: profileData.username.trim(),
@@ -76,13 +86,19 @@ const ProfileTab: React.FC = () => {
 
       await refreshUser();
       setIsEditing(false);
-      setSuccess("Profile updated successfully!");
 
-      setTimeout(() => setSuccess(null), 3000);
+      messagesRef.current?.show({
+        severity: "success",
+        summary: "Success",
+        detail: "Profile updated successfully!",
+      });
     } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "Failed to update profile",
-      );
+      messagesRef.current?.show({
+        severity: "error",
+        summary: "Update Failed",
+        detail:
+          error instanceof Error ? error.message : "Failed to update profile",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -90,8 +106,8 @@ const ProfileTab: React.FC = () => {
 
   const handleCancel = () => {
     setIsEditing(false);
-    setError(null);
-    // Reset form data
+    messagesRef.current?.clear();
+
     if (user) {
       setProfileData({
         username: user.username || "",
@@ -106,213 +122,138 @@ const ProfileTab: React.FC = () => {
       <div className="section-header">
         <h2 className="section-title">Profile Information</h2>
         {!isEditing && (
-          <button onClick={() => setIsEditing(true)} className="btn-edit">
-            <Edit size={16} />
-            Edit Profile
-          </button>
+          <Button
+            icon={<Edit size={16} />}
+            label="Edit Profile"
+            onClick={() => setIsEditing(true)}
+            severity="secondary"
+            className="p-button-secondary"
+          />
         )}
       </div>
 
-      {/* Alert Messages */}
-      {success && (
-        <div className="alert success">
-          <Check size={16} />
-          {success}
-        </div>
-      )}
+      {/* Messages */}
+      <Messages ref={messagesRef} />
 
-      {error && (
-        <div className="alert error">
-          <AlertCircle size={16} />
-          {error}
-        </div>
-      )}
+      {/* Form Content */}
+      <div className="p-fluid">
+        <div className="p-formgrid">
+          {/* Email (Read-only) */}
+          <div className="p-field p-col-12">
+            <label htmlFor="email">
+              <Mail size={16} />
+              Email Address
+            </label>
+            <InputText id="email" value={user?.email || ""} disabled readOnly />
+            <small>Email cannot be changed for security reasons</small>
+          </div>
 
-      {/* Form Grid */}
-      <div className="form-grid">
-        {/* Email (Read-only) */}
-        <div className="form-group">
-          <label className="form-label">
-            <Mail
-              size={16}
-              style={{ display: "inline", marginRight: "0.5rem" }}
-            />
-            Email Address
-          </label>
-          <input
-            type="email"
-            value={user?.email || ""}
-            className="form-input readonly"
-            readOnly
-            disabled
-          />
-          <small
-            style={{ color: "var(--neutral-500)", fontSize: "var(--text-sm)" }}
-          >
-            Email cannot be changed for security reasons
-          </small>
-        </div>
+          {/* Username */}
+          <div className="p-field p-col-12">
+            <label htmlFor="username">
+              <User size={16} />
+              Username (Optional)
+            </label>
+            {isEditing ? (
+              <InputText
+                id="username"
+                value={profileData.username}
+                onChange={(e) => handleInputChange("username", e.target.value)}
+                placeholder="Enter your username"
+                maxLength={50}
+                disabled={isLoading}
+              />
+            ) : (
+              <InputText
+                value={profileData.username || "No username set"}
+                readOnly
+              />
+            )}
+          </div>
 
-        {/* Username */}
-        <div className="form-group">
-          <label className="form-label">
-            <User
-              size={16}
-              style={{ display: "inline", marginRight: "0.5rem" }}
-            />
-            Username
-          </label>
-          {isEditing ? (
-            <input
-              type="text"
-              value={profileData.username}
-              onChange={(e) => handleInputChange("username", e.target.value)}
-              className="form-input"
-              placeholder="Enter your username"
-              disabled={isLoading}
-              maxLength={50}
-            />
-          ) : (
-            <input
-              type="text"
-              value={profileData.username || "No username set"}
-              className="form-input readonly"
-              readOnly
-            />
-          )}
-        </div>
-
-        {/* Age */}
-        <div className="form-group">
-          <label className="form-label">
-            <Calendar
-              size={16}
-              style={{ display: "inline", marginRight: "0.5rem" }}
-            />
-            Age (Optional)
-          </label>
-          {isEditing ? (
-            <input
-              type="number"
-              value={profileData.age}
-              onChange={(e) => handleInputChange("age", e.target.value)}
-              className="form-input"
-              placeholder="Enter your age"
-              disabled={isLoading}
-              min="13"
-              max="120"
-              style={{ maxWidth: "200px" }}
-            />
-          ) : (
-            <input
-              type="text"
-              value={profileData.age || "Not specified"}
-              className="form-input readonly"
-              readOnly
-              style={{ maxWidth: "200px" }}
-            />
-          )}
+          {/* Age (Optional) */}
+          <div className="p-field p-col-12 p-md-6">
+            <label htmlFor="age">
+              <Calendar size={16} />
+              Age
+            </label>
+            {isEditing ? (
+              <InputNumber
+                inputId="age"
+                value={profileData.age ? parseInt(profileData.age) : null}
+                onValueChange={(e) =>
+                  handleInputChange("age", e.value ? e.value.toString() : "")
+                }
+                placeholder="Enter your age"
+                min={13}
+                max={120}
+                disabled={isLoading}
+                showButtons
+                buttonLayout="stacked"
+              />
+            ) : (
+              <InputText
+                value={profileData.age || "Not specified"}
+                readOnly
+                style={{ maxWidth: "200px" }}
+              />
+            )}
+          </div>
         </div>
 
         {/* Action Buttons */}
         {isEditing && (
-          <div
-            style={{
-              display: "flex",
-              gap: "var(--space-4)",
-              paddingTop: "var(--space-4)",
-              borderTop: "1px solid var(--glass-white)",
-            }}
-          >
-            <button
+          <div className="p-d-flex p-ai-center p-mt-3" style={{ gap: "1rem" }}>
+            <Button
+              icon={
+                isLoading ? (
+                  <Loader2 size={16} className="loading-spinner" />
+                ) : (
+                  <Save size={16} />
+                )
+              }
+              label={isLoading ? "Saving..." : "Save Changes"}
               onClick={handleSave}
               disabled={isLoading}
-              className="btn-save"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 size={16} className="loading-spinner" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save size={16} />
-                  Save Changes
-                </>
-              )}
-            </button>
-
-            <button
+              className="p-button-primary"
+            />
+            <Button
+              icon={<X size={16} />}
+              label="Cancel"
               onClick={handleCancel}
               disabled={isLoading}
-              className="btn-edit"
-            >
-              <X size={16} />
-              Cancel
-            </button>
+              className="p-button-secondary"
+            />
           </div>
         )}
       </div>
 
-      {/* Account Info */}
-      <div
-        style={{
-          marginTop: "var(--space-8)",
-          padding: "var(--space-6)",
-          background: "var(--glass-white)",
-          borderRadius: "var(--radius-md)",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
-        }}
-      >
-        <h3
-          style={{
-            fontSize: "var(--text-lg)",
-            fontWeight: "var(--weight-semibold)",
-            color: "var(--neutral-800)",
-            marginBottom: "var(--space-4)",
-          }}
-        >
-          Account Information
-        </h3>
-        <div
-          style={{
-            display: "grid",
-            gap: "var(--space-3)",
-            fontSize: "var(--text-sm)",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span style={{ color: "var(--neutral-600)" }}>
-              Account Created:
-            </span>
-            <span style={{ color: "var(--neutral-800)" }}>
-              {user?.created_at
-                ? new Date(user.created_at).toLocaleDateString()
-                : "Unknown"}
-            </span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span style={{ color: "var(--neutral-600)" }}>Account Status:</span>
-            <span
-              style={{
-                color: user?.is_active ? "var(--primary-500)" : "#ef4444",
-                fontWeight: "var(--weight-medium)",
-              }}
-            >
-              {user?.is_active ? "Active" : "Inactive"}
-            </span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span style={{ color: "var(--neutral-600)" }}>Email Verified:</span>
-            <span
-              style={{
-                color: user?.is_verified ? "var(--primary-500)" : "#ef4444",
-                fontWeight: "var(--weight-medium)",
-              }}
-            >
-              {user?.is_verified ? "Verified" : "Not Verified"}
-            </span>
-          </div>
+      {/* Account Information */}
+      <div className="account-info-card">
+        <h3>Account Information</h3>
+        <div className="info-row">
+          <span className="info-label">Account Created:</span>
+          <span className="info-value">
+            {user?.created_at
+              ? new Date(user.created_at).toLocaleDateString()
+              : "Unknown"}
+          </span>
+        </div>
+        <div className="info-row">
+          <span className="info-label">Account Status:</span>
+          <span
+            className={`info-value ${user?.is_active ? "active" : "inactive"}`}
+          >
+            {user?.is_active ? "Active" : "Inactive"}
+          </span>
+        </div>
+        <div className="info-row">
+          <span className="info-label">Email Verified:</span>
+          <span
+            className={`info-value ${user?.is_verified ? "active" : "inactive"}`}
+          >
+            {user?.is_verified ? "Verified" : "Not Verified"}
+          </span>
         </div>
       </div>
     </div>

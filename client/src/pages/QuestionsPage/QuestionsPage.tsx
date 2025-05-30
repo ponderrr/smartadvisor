@@ -18,13 +18,21 @@ import {
 import { useRecommendations } from "../../context/RecommendationContext";
 import { useAuth } from "../../context/AuthContext";
 import { useSubscription } from "../../context/SubscriptionContext";
+import { Button } from "primereact/button";
+import { InputTextarea } from "primereact/inputtextarea";
+import { Card } from "primereact/card";
+import { Message } from "primereact/message";
+import { Badge } from "primereact/badge";
+import { ProgressBar } from "primereact/progressbar";
+import { Ripple } from "primereact/ripple";
+import { classNames } from "primereact/utils";
 import "./QuestionsPage.css";
 
 type RecommendationType = "movie" | "book" | "both";
 
 const QuestionsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const {
     getMaxQuestions,
     getMinQuestions,
@@ -63,8 +71,7 @@ const QuestionsPage: React.FC = () => {
   const maxQuestions = getMaxQuestions();
   const minQuestions = getMinQuestions();
   const isLimited = isFeatureLimited();
-  const planName =
-    currentSubscription?.tier === "free" ? "Free Plan" : "Premium Plan";
+  const planName = currentSubscription?.name || "Free Plan";
 
   // Set default question count based on limits - only update when limits change
   useEffect(() => {
@@ -191,9 +198,6 @@ const QuestionsPage: React.FC = () => {
           <div className="questions-container">
             {/* Header */}
             <div className="questions-header">
-              <div className="header-icon glass-primary">
-                <Sparkles size={32} />
-              </div>
               <h1 className="questions-title">
                 Get Personalized Recommendations
               </h1>
@@ -235,10 +239,19 @@ const QuestionsPage: React.FC = () => {
               </h2>
 
               {error && (
-                <div className="error-banner animate-slide-up">
-                  <span>{error}</span>
-                  <button onClick={clearError} className="error-close">
-                    ×
+                <div className="error-message">
+                  <div className="error-message-content">
+                    <div className="error-message-icon">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M8 5.33333V8M8 10.6667H8.00667M14 8C14 11.3137 11.3137 14 8 14C4.68629 14 2 11.3137 2 8C2 4.68629 4.68629 2 8 2C11.3137 2 14 4.68629 14 8Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                    <span>{error}</span>
+                  </div>
+                  <button onClick={clearError} className="error-message-close" aria-label="Close error message">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
                   </button>
                 </div>
               )}
@@ -259,6 +272,7 @@ const QuestionsPage: React.FC = () => {
                   <div className="type-arrow">
                     <ChevronRight size={20} />
                   </div>
+                  <Ripple />
                 </button>
 
                 <button
@@ -628,22 +642,30 @@ const QuestionsPage: React.FC = () => {
                   Question {currentSession.currentQuestionIndex + 1} of{" "}
                   {currentSession.questions.length}
                 </span>
-                <div className="progress-bar">
-                  <div
-                    className="progress-fill"
-                    style={{ width: `${progress}%` }}
-                  ></div>
-                </div>
+                <ProgressBar
+                  value={progress}
+                  showValue={false}
+                  style={{ height: "6px" }}
+                />
               </div>
             </div>
 
             {/* Question Card */}
             <div className="question-card glass">
               {error && (
-                <div className="error-banner animate-slide-up">
-                  <span>{error}</span>
-                  <button onClick={clearError} className="error-close">
-                    ×
+                <div className="error-message">
+                  <div className="error-message-content">
+                    <div className="error-message-icon">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M8 5.33333V8M8 10.6667H8.00667M14 8C14 11.3137 11.3137 14 8 14C4.68629 14 2 11.3137 2 8C2 4.68629 4.68629 2 8 2C11.3137 2 14 4.68629 14 8Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                    <span>{error}</span>
+                  </div>
+                  <button onClick={clearError} className="error-message-close" aria-label="Close error message">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
                   </button>
                 </div>
               )}
@@ -655,13 +677,14 @@ const QuestionsPage: React.FC = () => {
                 <h2 className="question-text">{currentQuestion.text}</h2>
 
                 <div className="answer-section">
-                  <textarea
-                    className="answer-input"
+                  <InputTextarea
+                    className="w-full"
                     placeholder="Type your answer here..."
                     value={currentAnswer}
                     onChange={(e) => handleAnswerChange(e.target.value)}
                     rows={4}
                     disabled={isLoading}
+                    autoResize
                   />
                   <div className="answer-counter">
                     {currentAnswer.length}/500
@@ -670,32 +693,36 @@ const QuestionsPage: React.FC = () => {
               </div>
 
               <div className="question-actions">
-                <button
+                <Button
+                  icon={<ArrowLeft size={20} />}
+                  label="Previous"
+                  className="p-button-text"
                   onClick={goToPreviousQuestion}
-                  className="btn-glass"
                   disabled={!canGoBack() || isLoading}
-                >
-                  <ArrowLeft size={20} />
-                  Previous
-                </button>
+                />
 
-                <button
-                  onClick={handleNext}
-                  className="btn-primary"
-                  disabled={!canGoNext() || isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 size={20} className="loading-spinner" />
-                      {isLastQuestion ? "Generating..." : "Processing..."}
-                    </>
-                  ) : (
-                    <>
-                      {isLastQuestion ? "Get Recommendations" : "Next"}
+                <Button
+                  icon={
+                    isLoading ? (
+                      <Loader2 size={20} className="pi-spin" />
+                    ) : (
                       <ArrowRight size={20} />
-                    </>
-                  )}
-                </button>
+                    )
+                  }
+                  iconPos="right"
+                  label={
+                    isLoading
+                      ? isLastQuestion
+                        ? "Generating..."
+                        : "Processing..."
+                      : isLastQuestion
+                        ? "Get Recommendations"
+                        : "Next"
+                  }
+                  onClick={handleNext}
+                  disabled={!canGoNext() || isLoading}
+                  severity="primary"
+                />
               </div>
             </div>
 

@@ -10,6 +10,8 @@ import {
   Shield,
 } from "lucide-react";
 
+import "./AccountComponents.css";
+
 interface SecurityData {
   currentPassword: string;
   newPassword: string;
@@ -151,31 +153,13 @@ const SecurityTab: React.FC = () => {
       )}
 
       {/* Change Password Form */}
-      <div
-        style={{
-          background: "var(--glass-white)",
-          padding: "var(--space-6)",
-          borderRadius: "var(--radius-lg)",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
-          marginBottom: "var(--space-8)",
-        }}
-      >
-        <h3
-          style={{
-            fontSize: "var(--text-lg)",
-            fontWeight: "var(--weight-semibold)",
-            color: "var(--neutral-800)",
-            marginBottom: "var(--space-6)",
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-2)",
-          }}
-        >
+      <div className="security-card">
+        <h3 className="security-card-title">
           <Lock size={20} />
           Change Password
         </h3>
 
-        <div className="form-grid" style={{ maxWidth: "500px" }}>
+        <div className="form-grid">
           {/* Current Password */}
           <div className="form-group">
             <label className="form-label">Current Password</label>
@@ -189,7 +173,7 @@ const SecurityTab: React.FC = () => {
                 className="form-input"
                 placeholder="Enter your current password"
                 disabled={isLoading}
-                style={{ paddingRight: "3rem" }}
+
               />
               <button
                 type="button"
@@ -233,42 +217,17 @@ const SecurityTab: React.FC = () => {
 
             {/* Password Strength Indicator */}
             {securityData.newPassword && (
-              <div
-                style={{
-                  marginTop: "var(--space-3)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--space-3)",
-                }}
-              >
-                <div
-                  style={{
-                    flex: 1,
-                    height: "4px",
-                    background: "var(--glass-white)",
-                    borderRadius: "var(--radius-full)",
-                    overflow: "hidden",
-                  }}
-                >
+              <div className="password-strength">
+                <div className="strength-bar">
                   <div
+                    className="strength-indicator"
                     style={{
-                      height: "100%",
                       width: `${(passwordStrength.score / 5) * 100}%`,
                       backgroundColor: passwordStrength.color,
-                      borderRadius: "var(--radius-full)",
-                      transition: "all var(--transition-normal)",
                     }}
                   ></div>
                 </div>
-                <span
-                  style={{
-                    fontSize: "var(--text-xs)",
-                    fontWeight: "var(--weight-medium)",
-                    color: passwordStrength.color,
-                    minWidth: "70px",
-                    textAlign: "right",
-                  }}
-                >
+                <span className="strength-label" style={{ color: passwordStrength.color }}>
                   {passwordStrength.label}
                 </span>
               </div>
@@ -306,7 +265,7 @@ const SecurityTab: React.FC = () => {
           </div>
 
           {/* Action Button */}
-          <div style={{ paddingTop: "var(--space-4)" }}>
+          <div className="form-actions">
             <button
               onClick={handleChangePassword}
               disabled={
@@ -334,42 +293,16 @@ const SecurityTab: React.FC = () => {
       </div>
 
       {/* Security Tips */}
-      <div
-        style={{
-          background: "var(--glass-primary)",
-          padding: "var(--space-6)",
-          borderRadius: "var(--radius-lg)",
-          border: "1px solid rgba(16, 183, 127, 0.2)",
-        }}
-      >
-        <h3
-          style={{
-            fontSize: "var(--text-lg)",
-            fontWeight: "var(--weight-semibold)",
-            color: "var(--primary-600)",
-            marginBottom: "var(--space-4)",
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-2)",
-          }}
-        >
+      <div className="security-tips">
+        <h3 className="security-tips-title">
           <Shield size={20} />
           Security Tips
         </h3>
-        <ul
-          style={{
-            listStyle: "none",
-            padding: 0,
-            margin: 0,
-            color: "var(--primary-600)",
-            fontSize: "var(--text-sm)",
-            lineHeight: 1.6,
-          }}
-        >
-          <li style={{ marginBottom: "var(--space-2)" }}>
+        <ul className="security-tips-list">
+          <li>
             ✓ Use a password that's at least 8 characters long
           </li>
-          <li style={{ marginBottom: "var(--space-2)" }}>
+          <li>
             ✓ Include uppercase and lowercase letters, numbers, and symbols
           </li>
           <li style={{ marginBottom: "var(--space-2)" }}>
