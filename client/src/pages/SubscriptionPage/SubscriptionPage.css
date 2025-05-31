@@ -2,10 +2,10 @@
 
 .subscription-page {
     position: relative;
-    min-height: 100vh;
+    min-height: calc(100vh - 80px);
     overflow-x: hidden;
     font-family: var(--font-sans);
-    padding-top: var(--space-20);
+    padding-top: var(--space-10);
     padding-bottom: var(--space-16);
 }
 
@@ -16,7 +16,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: -1;
+    z-index: -2;
     background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
     transition: all var(--transition-normal);
 }

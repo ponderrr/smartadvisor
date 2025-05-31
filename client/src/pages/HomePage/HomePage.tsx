@@ -16,6 +16,7 @@ import { Button } from "primereact/button";
 import { Card } from "primereact/card";
 import { Message } from "primereact/message";
 import { Ripple } from "primereact/ripple";
+import { ScrollTop } from "primereact/scrolltop";
 import { classNames } from "primereact/utils";
 import "./HomePage.css";
 
@@ -24,22 +25,16 @@ const HomePage: React.FC = () => {
   const location = useLocation();
   const { isAuthenticated, user } = useAuth();
   const { getMaxQuestions } = useSubscription();
-  const [showScrollTop, setShowScrollTop] = useState(false);
   const [showScrollDown, setShowScrollDown] = useState(true);
 
   useEffect(() => {
     const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 400);
       setShowScrollDown(window.scrollY < 100);
     };
 
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
 
   const handleGetStarted = () => {
     if (isAuthenticated) {
@@ -50,7 +45,17 @@ const HomePage: React.FC = () => {
   };
 
   const scrollToSection = (sectionId: string) => {
-    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" });
+    const element = document.getElementById(sectionId);
+    if (element) {
+      const headerOffset = 80; // Account for any fixed headers
+      const elementPosition = element.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth"
+      });
+    }
   };
 
   const features = [
@@ -110,8 +115,7 @@ const HomePage: React.FC = () => {
               <div className="hero-actions">
                 <Button
                   onClick={handleGetStarted}
-                  className="hero-cta p-ripple"
-                  style={{ background: '#00955f', border: 'none' }}
+                  className="hero-cta-button p-ripple"
                   rounded
                   iconPos="right"
                   label={
@@ -123,8 +127,6 @@ const HomePage: React.FC = () => {
                   <Ripple />
                 </Button>
               </div>
-
-
             </div>
 
             <div className="hero-visual">
@@ -163,14 +165,16 @@ const HomePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Scroll button with ripple */}
+          {/* Scroll Down Indicator using PrimeReact pattern */}
           <div
-            className={`scroll-indicator ${showScrollDown ? "visible" : ""} p-ripple glass`}
+            className={`scroll-down-indicator ${showScrollDown ? "visible" : ""}`}
             onClick={() => scrollToSection("features")}
             aria-label="Scroll to features"
           >
-            <ChevronDown className="animate-bounce text-white" size={24} />
-            <Ripple />
+            <i
+              className="pi pi-angle-down fadeout animation-duration-1000 animation-iteration-infinite"
+              style={{ fontSize: "2rem", color: "white" }}
+            ></i>
           </div>
         </div>
       </section>
@@ -254,15 +258,14 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Scroll to Top Button */}
-      <div
-        className={`scroll-to-top p-button-text p-ripple ${showScrollTop ? "visible" : ""}`}
-        onClick={scrollToTop}
-        aria-label="Scroll to top of page"
-      >
-        <ChevronUp size={24} />
-        <Ripple />
-      </div>
+      {/* PrimeReact ScrollTop Component */}
+      <ScrollTop 
+        className="custom-scrolltop" 
+        target="window"
+        threshold={100}
+        behavior="smooth"
+        icon="pi pi-arrow-up"
+      />
     </div>
   );
 };

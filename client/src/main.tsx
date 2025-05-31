@@ -27,6 +27,24 @@ const DEFAULT_THEME = {
         },
       },
     },
+    scrolltop: {
+      root: {
+        backgroundColor: "#00955f",
+        borderColor: "#00955f",
+        color: "white",
+        borderRadius: "50%",
+        width: "48px",
+        height: "48px",
+        boxShadow: "0 4px 12px rgba(0, 149, 95, 0.3)",
+        transition: "all 0.3s ease",
+        "&:hover": {
+          backgroundColor: "#007a4d",
+          borderColor: "#007a4d",
+          transform: "translateY(-2px)",
+          boxShadow: "0 6px 16px rgba(0, 149, 95, 0.4)",
+        },
+      },
+    },
   },
 };
 

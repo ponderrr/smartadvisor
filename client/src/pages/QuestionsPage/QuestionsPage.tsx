@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import {
   ArrowRight,
   ArrowLeft,
-  Sparkles,
   Film,
   Book,
   Star,
@@ -14,6 +13,12 @@ import {
   Zap,
   Plus,
   Minus,
+  Lightbulb,
+  Target,
+  Clock,
+  Heart,
+  Brain,
+  Sparkles,
 } from "lucide-react";
 import { useRecommendations } from "../../context/RecommendationContext";
 import { useAuth } from "../../context/AuthContext";
@@ -29,6 +34,87 @@ import { classNames } from "primereact/utils";
 import "./QuestionsPage.css";
 
 type RecommendationType = "movie" | "book" | "both";
+
+// Rotating tips for different scenarios
+const GENERAL_TIPS = [
+  {
+    icon: Target,
+    text: "Be as specific as possible - mention genres, themes, or specific titles you enjoyed!",
+  },
+  {
+    icon: Heart,
+    text: "Don't just say what you like - tell us why you like it for better recommendations.",
+  },
+  {
+    icon: Brain,
+    text: "Think about your current mood - do you want something familiar or completely new?",
+  },
+  {
+    icon: Clock,
+    text: "Consider the time you have available - looking for a quick read or a long series?",
+  },
+  {
+    icon: Sparkles,
+    text: "Mention if you prefer newer releases or don't mind classic/older content.",
+  },
+];
+
+const MOVIE_TIPS = [
+  {
+    icon: Film,
+    text: "Mention specific actors, directors, or cinematography styles you enjoy.",
+  },
+  {
+    icon: Target,
+    text: "Tell us about recent movies you loved - we'll find similar gems!",
+  },
+  {
+    icon: Heart,
+    text: "Consider your viewing context - movie night with friends or solo experience?",
+  },
+  {
+    icon: Brain,
+    text: "Think about runtime preferences - quick watch or epic adventure?",
+  },
+];
+
+const BOOK_TIPS = [
+  {
+    icon: Book,
+    text: "Mention your favorite authors or specific writing styles you enjoy.",
+  },
+  {
+    icon: Target,
+    text: "Tell us about book series vs. standalone novels - what's your preference?",
+  },
+  {
+    icon: Heart,
+    text: "Consider the complexity level - light read or something challenging?",
+  },
+  {
+    icon: Brain,
+    text: "Think about length preferences - short stories, novels, or epic series?",
+  },
+];
+
+const BOTH_TIPS = [
+  {
+    icon: Star,
+    text: "Consider how books and movies complement each other in your preferences.",
+  },
+  {
+    icon: Target,
+    text: "Tell us if you prefer adaptations or completely original stories.",
+  },
+  {
+    icon: Heart,
+    text: "Think about whether you like similar themes across different media.",
+  },
+  {
+    icon: Brain,
+    text: "Consider your time balance - more movies or books in your routine?",
+  },
+];
 
 const QuestionsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -62,16 +148,59 @@ const QuestionsPage: React.FC = () => {
 
   const [isStarting, setIsStarting] = useState(false);
   const [selectedType, setSelectedType] = useState<RecommendationType | null>(
-    null
+    null,
   );
   const [selectedQuestionCount, setSelectedQuestionCount] = useState<number>(5);
   const [showQuestionSelection, setShowQuestionSelection] = useState(false);
+
+  // State for rotating tips
+  const [currentTipIndex, setCurrentTipIndex] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   // Get subscription info with fallbacks
   const maxQuestions = getMaxQuestions();
   const minQuestions = getMinQuestions();
   const isLimited = isFeatureLimited();
   const planName = currentSubscription?.name || "Free Plan";
+
+  // Get appropriate tips based on selected type
+  const getTipsArray = () => {
+    if (!selectedType) return GENERAL_TIPS;
+    switch (selectedType) {
+      case "movie":
+        return MOVIE_TIPS;
+      case "book":
+        return BOOK_TIPS;
+      case "both":
+        return BOTH_TIPS;
+      default:
+        return GENERAL_TIPS;
+    }
+  };
+
+  const tips = getTipsArray();
+
+  // Rotate tips every 8 seconds when on question flow
+  useEffect(() => {
+    if (!currentSession.id || !getCurrentQuestion()) return;
+
+    const interval = setInterval(() => {
+      setIsAnimating(true);
+
+      setTimeout(() => {
+        setCurrentTipIndex((prev) => (prev + 1) % tips.length);
+        setIsAnimating(false);
+      }, 200); // Half of animation duration
+    }, 8000); // Change tip every 8 seconds
+
+    return () => clearInterval(interval);
+  }, [currentSession.id, getCurrentQuestion, tips.length]);
+
+  // Reset tip index when type changes
+  useEffect(() => {
+    setCurrentTipIndex(0);
+    setIsAnimating(false);
+  }, [selectedType]);
 
   // Set default question count based on limits - only update when limits change
   useEffect(() => {
@@ -123,7 +252,7 @@ const QuestionsPage: React.FC = () => {
         "Starting session with type:",
         selectedType,
         "and questions:",
-        selectedQuestionCount
+        selectedQuestionCount,
       );
 
       await startRecommendationSession(selectedType, selectedQuestionCount);
@@ -214,10 +343,7 @@ const QuestionsPage: React.FC = () => {
                   }`}
                 >
                   {isLimited ? (
-                    <>
-                      <Sparkles size={16} />
-                      {planName}
-                    </>
+                    <>{planName}</>
                   ) : (
                     <>
                       <Crown size={16} />
@@ -242,15 +368,43 @@ const QuestionsPage: React.FC = () => {
                 <div className="error-message">
                   <div className="error-message-content">
                     <div className="error-message-icon">
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M8 5.33333V8M8 10.6667H8.00667M14 8C14 11.3137 11.3137 14 8 14C4.68629 14 2 11.3137 2 8C2 4.68629 4.68629 2 8 2C11.3137 2 14 4.68629 14 8Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M8 5.33333V8M8 10.6667H8.00667M14 8C14 11.3137 11.3137 14 8 14C4.68629 14 2 11.3137 2 8C2 4.68629 4.68629 2 8 2C11.3137 2 14 4.68629 14 8Z"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
                       </svg>
                     </div>
                     <span>{error}</span>
                   </div>
-                  <button onClick={clearError} className="error-message-close" aria-label="Close error message">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <button
+                    onClick={clearError}
+                    className="error-message-close"
+                    aria-label="Close error message"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M12 4L4 12M4 4L12 12"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -364,9 +518,6 @@ const QuestionsPage: React.FC = () => {
           <div className="questions-container">
             {/* Header */}
             <div className="questions-header">
-              <div className="header-icon glass-primary">
-                <Sparkles size={32} />
-              </div>
               <h1 className="questions-title">
                 How many questions would you like?
               </h1>
@@ -513,7 +664,7 @@ const QuestionsPage: React.FC = () => {
                         {count}
                       </button>
                     );
-                  }
+                  },
                 )}
               </div>
 
@@ -615,6 +766,9 @@ const QuestionsPage: React.FC = () => {
 
   // Step 4: Questions Flow
   if (currentQuestion) {
+    const currentTip = tips[currentTipIndex];
+    const TipIcon = currentTip.icon;
+
     return (
       <div className="questions-page">
         <div className="questions-background">
@@ -656,15 +810,43 @@ const QuestionsPage: React.FC = () => {
                 <div className="error-message">
                   <div className="error-message-content">
                     <div className="error-message-icon">
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M8 5.33333V8M8 10.6667H8.00667M14 8C14 11.3137 11.3137 14 8 14C4.68629 14 2 11.3137 2 8C2 4.68629 4.68629 2 8 2C11.3137 2 14 4.68629 14 8Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M8 5.33333V8M8 10.6667H8.00667M14 8C14 11.3137 11.3137 14 8 14C4.68629 14 2 11.3137 2 8C2 4.68629 4.68629 2 8 2C11.3137 2 14 4.68629 14 8Z"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
                       </svg>
                     </div>
                     <span>{error}</span>
                   </div>
-                  <button onClick={clearError} className="error-message-close" aria-label="Close error message">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <button
+                    onClick={clearError}
+                    className="error-message-close"
+                    aria-label="Close error message"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M12 4L4 12M4 4L12 12"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -726,12 +908,35 @@ const QuestionsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Tips */}
+            {/* Rotating Tips */}
             <div className="question-tips">
-              <p>
-                💡 <strong>Tip:</strong> Be as specific as possible to get
-                better recommendations!
-              </p>
+              <div className={`rotating-tip ${isAnimating ? "animating" : ""}`}>
+                <div className="tip-icon">
+                  <TipIcon size={20} />
+                </div>
+                <div className="tip-content">
+                  <span className="tip-label">Tip:</span>
+                  <span className="tip-text">{currentTip.text}</span>
+                </div>
+              </div>
+
+              {/* Tip indicators */}
+              <div className="tip-indicators">
+                {tips.map((_, index) => (
+                  <button
+                    key={index}
+                    className={`tip-indicator ${index === currentTipIndex ? "active" : ""}`}
+                    onClick={() => {
+                      setIsAnimating(true);
+                      setTimeout(() => {
+                        setCurrentTipIndex(index);
+                        setIsAnimating(false);
+                      }, 200);
+                    }}
+                    aria-label={`Show tip ${index + 1}`}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </div>
