@@ -352,7 +352,8 @@
 }
 
 [data-theme="dark"] .p-menu .p-menuitem-link {
-    color: var(--neutral-300);
+    color: white;
+    background: transparent;
 }
 
 [data-theme="dark"] .p-menu .p-menuitem-link:hover {
@@ -419,13 +420,14 @@
 }
 
 .p-badge {
-    background: var(--primary-500);
-    color: white;
+    background: var(--primary-color);
+    color: var(--surface-0);
     font-size: 0.75rem;
     font-weight: 700;
     min-width: 1.5rem;
     height: 1.5rem;
     line-height: 1.5rem;
+    border-radius: 0.75rem;
 }
 
 .p-menu .p-menuitem {
@@ -445,7 +447,20 @@
 .auth-buttons {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
+    gap: 12px;
+    margin-left: var(--space-4);
+}
+
+.auth-button {
+    font-size: 1.1rem !important;
+    padding: 0.5rem 1.5rem !important;
+}
+
+.auth-button-primary {
+    font-size: 1.1rem !important;
+    background-color: #00955f !important;
+    border: 1px solid #00955f !important;
+    padding: 0.5rem 1.5rem !important;
 }
 
 /* Remove ugly outlines and add smooth animations */
@@ -581,10 +596,14 @@
 .mobile-nav {
     position: absolute;
     top: 100%;
-    left: 0;
-    right: 0;
-    margin: var(--space-4);
-    border-radius: var(--radius-lg);
+    left: 16px;
+    right: 16px;
+    margin: 0;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    padding: 24px;
     animation: slideDown 0.3s ease-out;
     box-shadow: var(--shadow-glass-hover);
 }
@@ -609,15 +628,15 @@
 
 .mobile-nav-link {
     display: block;
-    color: var(--neutral-700);
+    padding: 16px;
+    color: white;
     text-decoration: none;
+    border-radius: 8px;
+    margin-bottom: 8px;
     font-weight: var(--weight-medium);
     font-size: var(--text-lg);
-    padding: var(--space-4);
-    border-radius: var(--radius-md);
-    background: var(--glass-white);
     transition: all var(--transition-normal);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: transparent;
 }
 
 .mobile-nav-link:hover {
@@ -626,8 +645,8 @@
 }
 
 .mobile-nav-link.active {
-    background: var(--glass-primary);
-    color: var(--primary-600);
+    background: rgba(16, 183, 127, 0.2);
+    color: white;
     border-color: rgba(16, 183, 127, 0.3);
 }
 

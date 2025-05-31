@@ -104,22 +104,28 @@
     flex-wrap: wrap;
 }
 
-.hero-cta {
-    padding: var(--space-4) var(--space-8);
-    font-size: var(--text-lg);
-    font-weight: var(--weight-semibold);
-    background: #00955f;
-    color: white;
-    border: none;
-    border-radius: 0.5rem;
-    box-shadow: 0 4px 20px rgba(0, 149, 95, 0.2);
-    transition: all var(--transition-normal);
+/* Hero CTA Button - Primary Color Fix */
+.hero-cta-button {
+    background-color: #00955f !important;
+    border-color: #00955f !important;
+    color: white !important;
+    font-size: 1.1rem !important;
+    padding: 1rem 2rem !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 20px rgba(0, 149, 95, 0.2) !important;
+    transition: all 0.2s ease !important;
+    transform: translateY(0);
 }
 
-.hero-cta:hover {
-    background: #007a4d;
-    box-shadow: 0 8px 30px rgba(0, 149, 95, 0.3);
+.hero-cta-button:enabled:hover {
+    background-color: #007a4d !important;
+    border-color: #007a4d !important;
+    box-shadow: 0 8px 30px rgba(0, 149, 95, 0.3) !important;
     transform: translateY(-2px);
+}
+
+.hero-cta-button:enabled:active {
+    transform: translateY(0);
 }
 
 .user-welcome {
@@ -275,23 +281,6 @@
     background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
 }
 
-/* Hero CTA Button */
-.hero-cta {
-    position: relative;
-    background-color: var(--primary-500) !important;
-    border: 1px solid var(--primary-500) !important;
-    font-size: 1.1rem !important;
-    padding: 1rem 2rem !important;
-    transform: translateY(0);
-    transition: transform var(--transition-normal) !important;
-}
-
-.hero-cta:hover {
-    transform: translateY(-2px);
-    background-color: var(--primary-600) !important;
-    border-color: var(--primary-600) !important;
-}
-
 /* Card Transitions */
 .recommendation-card,
 .feature-card,
@@ -339,8 +328,8 @@
     background: #3b82f6;
 }
 
-/* Scroll Indicator */
-.scroll-indicator {
+/* Scroll Down Indicator */
+.scroll-down-indicator {
     position: absolute !important;
     bottom: var(--space-8) !important;
     left: 50% !important;
@@ -353,36 +342,35 @@
     justify-content: center !important;
     cursor: pointer !important;
     border: none !important;
-    background: transparent !important;
+    background: rgba(0, 149, 95, 0.8) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    box-shadow: 0 4px 12px rgba(0, 149, 95, 0.3) !important;
     transition: all var(--transition-normal) !important;
     opacity: 0;
     visibility: hidden;
 }
 
-[data-theme="dark"] .scroll-indicator {
-    background: var(--primary-400);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+[data-theme="dark"] .scroll-down-indicator {
+    background: rgba(0, 149, 95, 0.9) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
 }
 
-.scroll-indicator:hover {
-    background: var(--primary-600);
-    transform: translateX(-50%) translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+.scroll-down-indicator:hover {
+    background: rgba(0, 149, 95, 1) !important;
+    transform: translateX(-50%) translateY(-2px) !important;
+    box-shadow: 0 6px 16px rgba(0, 149, 95, 0.4) !important;
 }
 
-.scroll-indicator.visible {
+.scroll-down-indicator.visible {
     opacity: 1;
     visibility: visible;
     transform: translateX(-50%) translateY(0);
 }
 
-[data-theme="dark"] .scroll-indicator:hover {
-    background: var(--primary-500);
+[data-theme="dark"] .scroll-down-indicator:hover {
+    background: rgba(0, 149, 95, 1) !important;
 }
-
-/* Remove bounce animation */
-/* .scroll-indicator {
-
 
 /* Stats Section */
 .stats-section {
@@ -699,7 +687,54 @@
     color: var(--neutral-300);
 }
 
-/* Testimonials Section */
+/* Custom ScrollTop Component Styling */
+.custom-scrolltop {
+    position: fixed !important;
+    bottom: 20px !important;
+    right: 20px !important;
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 50% !important;
+    background: #00955f !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(0, 149, 95, 0.3) !important;
+    color: white !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    z-index: 999 !important;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(20px);
+}
+
+.custom-scrolltop.p-scrolltop-sticky {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: translateY(0) !important;
+}
+
+.custom-scrolltop:hover {
+    background: #007a4d !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 16px rgba(0, 149, 95, 0.4) !important;
+}
+
+.custom-scrolltop i {
+    font-size: 1.2rem !important;
+    color: white !important;
+}
+
+[data-theme="dark"] .custom-scrolltop {
+    background: #00955f !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme="dark"] .custom-scrolltop:hover {
+    background: #007a4d !important;
+}
 
 /* Pricing Section */
 .pricing-section {
@@ -1036,7 +1071,7 @@
         align-items: center;
     }
 
-    .hero-cta {
+    .hero-cta-button {
         width: 100%;
         max-width: 300px;
         justify-content: center;
@@ -1082,6 +1117,13 @@
 
     .cta-description {
         font-size: var(--text-base);
+    }
+
+    .custom-scrolltop {
+        bottom: 16px !important;
+        right: 16px !important;
+        width: 44px !important;
+        height: 44px !important;
     }
 }
 
@@ -1134,10 +1176,6 @@
         font-size: var(--text-lg);
     }
 
-    .testimonial-text {
-        font-size: var(--text-base);
-    }
-
     .cta-title {
         font-size: var(--text-2xl);
     }
@@ -1145,6 +1183,18 @@
     .cta-button {
         width: 100%;
         padding: var(--space-4) var(--space-6);
+    }
+
+    .custom-scrolltop {
+        bottom: 12px !important;
+        right: 12px !important;
+        width: 40px !important;
+        height: 40px !important;
+    }
+
+    .scroll-down-indicator {
+        width: 44px !important;
+        height: 44px !important;
     }
 }
 
@@ -1183,18 +1233,20 @@
     .feature-card:hover,
     .step-card:hover,
     .pricing-card:hover,
-    .scroll-indicator:hover {
+    .scroll-down-indicator:hover,
+    .custom-scrolltop:hover {
         transform: none !important;
     }
 
-    .scroll-indicator {
+    .scroll-down-indicator,
+    .custom-scrolltop {
         animation: none !important;
     }
 }
 
 /* Focus States for Accessibility */
-.scroll-indicator:focus,
-.indicator:focus {
+.scroll-down-indicator:focus,
+.custom-scrolltop:focus {
     outline: 2px solid var(--primary-500);
     outline-offset: 2px;
 }
@@ -1204,7 +1256,6 @@
     .recommendation-card,
     .feature-card,
     .step-card,
-    .testimonial-card,
     .pricing-card,
     .cta-content {
         border: 2px solid var(--neutral-800);
@@ -1213,7 +1264,6 @@
     [data-theme="dark"] .recommendation-card,
     [data-theme="dark"] .feature-card,
     [data-theme="dark"] .step-card,
-    [data-theme="dark"] .testimonial-card,
     [data-theme="dark"] .pricing-card,
     [data-theme="dark"] .cta-content {
         border: 2px solid var(--neutral-200);
@@ -1223,82 +1273,17 @@
     .user-welcome {
         border: 2px solid var(--primary-500);
     }
-}
-.home-page {
-    position: relative;
-}
 
-/* Scroll to Top Button */
-.scroll-to-top {
-    position: fixed;
-    bottom: var(--space-6);
-    right: 0;
-    background: var(--primary-500);
-    color: white;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    border: none;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    transition: all var(--transition-normal);
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(20px);
-    z-index: 100;
-}
-
-.scroll-to-top.visible {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-.scroll-to-top:hover {
-    background: var(--primary-600);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-}
-
-[data-theme="dark"] .scroll-to-top {
-    background: var(--primary-400);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-[data-theme="dark"] .scroll-to-top:hover {
-    background: var(--primary-500);
-}
-
-/* Add to reduced motion preferences */
-@media (prefers-reduced-motion: reduce) {
-    .scroll-to-top {
-        transition: none;
-    }
-}
-
-/* Add to high contrast preferences */
-@media (prefers-contrast: high) {
-    .scroll-to-top {
-        background: black;
-        border: 2px solid white;
+    .custom-scrolltop,
+    .scroll-down-indicator {
+        background: black !important;
+        border: 2px solid white !important;
     }
 
-    [data-theme="dark"] .scroll-to-top {
-        background: white;
-        border: 2px solid black;
-        color: black;
-    }
-}
-
-/* Adjust for mobile devices */
-@media (max-width: 480px) {
-    .scroll-to-top {
-        bottom: var(--space-4);
-        right: 0;
-        width: 40px;
-        height: 40px;
+    [data-theme="dark"] .custom-scrolltop,
+    [data-theme="dark"] .scroll-down-indicator {
+        background: white !important;
+        border: 2px solid black !important;
+        color: black !important;
     }
 }

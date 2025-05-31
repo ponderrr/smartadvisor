@@ -8,60 +8,7 @@
     font-family: var(--font-sans);
 }
 
-/* Animated Background */
-.account-background {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -1;
-    background: linear-gradient(
-        135deg,
-        rgba(16, 183, 127, 0.1) 0%,
-        rgba(52, 211, 153, 0.05) 50%,
-        rgba(34, 197, 94, 0.1) 100%
-    );
-}
 
-[data-theme="dark"] .account-background {
-    background: --bg-dark;
-}
-
-.account-page .floating-shapes {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-}
-
-.account-page .shape {
-    position: absolute;
-    border-radius: 50%;
-    background: linear-gradient(
-        135deg,
-        rgba(16, 183, 127, 0.3),
-        rgba(52, 211, 153, 0.2)
-    );
-    backdrop-filter: blur(20px);
-    animation: accountFloat 30s ease-in-out infinite;
-}
-
-/* Fixed floating shapes animation */
-@keyframes accountFloat {
-    0%,
-    100% {
-        transform: translateY(0px) rotate(0deg) scale(1);
-    }
-    25% {
-        transform: translateY(-30px) rotate(2deg) scale(1.02);
-    }
-    50% {
-        transform: translateY(-60px) rotate(4deg) scale(1.05);
-    }
-    75% {
-        transform: translateY(-30px) rotate(2deg) scale(1.02);
-    }
-}
 
 /* Main Container */
 .account-container {
@@ -522,17 +469,11 @@
     .account-main {
         padding: var(--space-4);
     }
-
-    /* Hide floating shapes on small screens */
-    .floating-shapes {
-        display: none;
-    }
 }
 
 /* Accessibility */
 @media (prefers-reduced-motion: reduce) {
-    .account-page *,
-    .floating-shapes {
+    .account-page * {
         animation: none !important;
         transition: none !important;
     }

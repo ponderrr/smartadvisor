@@ -11,7 +11,8 @@ import { RecommendationProvider } from "./context/RecommendationContext";
 import { SubscriptionProvider } from "./context/SubscriptionContext";
 import { SavedItemsProvider } from "./context/SavedItemsContext"; // Add this import
 import { clearInvalidTokens } from "./utils/tokenCleanup";
-import TokenDebug from "./components/debug/TokenDebug";
+import Layout from "./components/shared/Layout";
+import "./styles/floating-shapes.css";
 
 // Import the new glassmorphism pages
 import HomePage from "./pages/HomePage/HomePage";
@@ -77,7 +78,8 @@ function AppRoutes() {
     <div className="app flex flex-column w-full">
       <Navbar />
       <main className="main-content flex-grow-1">
-        <Routes>
+        <Layout>
+          <Routes>
           {/* Public Routes */}
           <Route path="/" element={<HomePage />} />
 
@@ -138,7 +140,8 @@ function AppRoutes() {
 
           {/* Catch-all route */}
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+          </Routes>
+        </Layout>
       </main>
     </div>
   );
@@ -173,7 +176,6 @@ function App() {
           <SavedItemsProvider>
             <RecommendationProvider>
               <AppRoutes />
-              <TokenDebug />
             </RecommendationProvider>
           </SavedItemsProvider>
         </SubscriptionProvider>

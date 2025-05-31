@@ -1,0 +1,69 @@
+/* Floating Shapes Global Styles */
+
+.floating-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    background: linear-gradient(
+        135deg,
+        rgba(16, 183, 127, 0.1) 0%,
+        rgba(52, 211, 153, 0.05) 50%,
+        rgba(34, 197, 94, 0.1) 100%
+    );
+}
+
+[data-theme="dark"] .floating-background {
+    background: --bg-dark;
+}
+
+.floating-shapes {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+.shape {
+    position: absolute;
+    border-radius: 50%;
+    background: linear-gradient(
+        135deg,
+        rgba(16, 183, 127, 0.3),
+        rgba(52, 211, 153, 0.2)
+    );
+    backdrop-filter: blur(20px);
+    animation: shapeFloat 30s ease-in-out infinite;
+}
+
+@keyframes shapeFloat {
+    0%,
+    100% {
+        transform: translateY(0px) rotate(0deg) scale(1);
+    }
+    25% {
+        transform: translateY(-30px) rotate(2deg) scale(1.02);
+    }
+    50% {
+        transform: translateY(-60px) rotate(4deg) scale(1.05);
+    }
+    75% {
+        transform: translateY(-30px) rotate(2deg) scale(1.02);
+    }
+}
+
+/* Hide floating shapes on small screens */
+@media (max-width: 480px) {
+    .floating-shapes {
+        display: none;
+    }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .floating-shapes {
+        animation: none !important;
+        transition: none !important;
+    }
+}

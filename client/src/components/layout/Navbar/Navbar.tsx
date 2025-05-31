@@ -176,11 +176,19 @@ const Navbar: React.FC = () => {
                               }}
                               className="mr-2"
                             />
-                            <div className="flex flex-column" style={{ marginLeft: '0.75rem' }}>
-                              <span className="font-bold" style={{ marginBottom: '0.25rem' }}>
+                            <div
+                              className="flex flex-column"
+                              style={{ marginLeft: "0.75rem" }}
+                            >
+                              <span
+                                className="font-bold"
+                                style={{ marginBottom: "0.25rem" }}
+                              >
                                 {user?.username || "User"}
                               </span>
-                              <span className="text-sm text-500">{user?.email}</span>
+                              <span className="text-sm text-500">
+                                {user?.email}
+                              </span>
                             </div>
                           </button>
                         );
@@ -191,10 +199,7 @@ const Navbar: React.FC = () => {
                       label: "My Profile",
                       command: () => navigate("/account/profile?tab=profile"),
                     },
-                    {
-                      label: "Settings",
-                      command: () => navigate("/account/settings"),
-                    },
+
                     {
                       label: "My Recommendations",
                       command: () => navigate("/account?tab=history"),
@@ -211,18 +216,11 @@ const Navbar: React.FC = () => {
                 />
               </div>
             ) : (
-              <div
-                className="auth-buttons"
-                style={{ display: "flex", gap: "12px" }}
-              >
+              <div className="auth-buttons">
                 <Link to="/signin">
                   <Button
-                    className="p-button-text"
+                    className="p-button-text auth-button"
                     size="large"
-                    style={{
-                      fontSize: "1.1rem",
-                      padding: "0.5rem 1.5rem",
-                    }}
                     pt={{
                       root: { style: { background: "transparent" } },
                       label: { style: { fontWeight: 500 } },
@@ -232,13 +230,8 @@ const Navbar: React.FC = () => {
                 </Link>
                 <Link to="/signup">
                   <Button
+                    className="auth-button-primary"
                     size="large"
-                    style={{
-                      fontSize: "1.1rem",
-                      backgroundColor: "#00955f",
-                      border: "1px solid #00955f",
-                      padding: "0.5rem 1.5rem",
-                    }}
                     pt={{
                       root: { style: { background: "#00955f" } },
                       label: { style: { fontWeight: 500 } },
@@ -262,20 +255,7 @@ const Navbar: React.FC = () => {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div
-            className="mobile-nav glass"
-            style={{
-              position: "absolute",
-              top: "100%",
-              left: "16px",
-              right: "16px",
-              background: "rgba(255, 255, 255, 0.1)",
-              backdropFilter: "blur(16px)",
-              border: "1px solid rgba(255, 255, 255, 0.2)",
-              borderRadius: "16px",
-              padding: "24px",
-            }}
-          >
+          <div className="mobile-nav">
             <div className="mobile-nav-content">
               <Link
                 to="/subscription"
@@ -283,17 +263,6 @@ const Navbar: React.FC = () => {
                   isActivePage("/subscription") ? "active" : ""
                 }`}
                 onClick={closeMenu}
-                style={{
-                  display: "block",
-                  padding: "16px",
-                  color: "white",
-                  textDecoration: "none",
-                  borderRadius: "8px",
-                  marginBottom: "8px",
-                  background: isActivePage("/subscription")
-                    ? "rgba(16, 183, 127, 0.2)"
-                    : "transparent",
-                }}
               >
                 Plans
               </Link>
