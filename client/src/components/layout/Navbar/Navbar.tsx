@@ -80,14 +80,14 @@ const Navbar: React.FC = () => {
 
           {/* Desktop Navigation */}
           <nav className="nav-desktop">
-            <Link
-              to="/subscription"
-              className={`nav-link ${isActivePage("/subscription") ? "active" : ""}`}
-            >
-              Plans
-            </Link>
             {isAuthenticated ? (
               <>
+                <Link
+                  to="/subscription"
+                  className={`nav-link ${isActivePage("/subscription") ? "active" : ""}`}
+                >
+                  Plans
+                </Link>
                 <Link
                   to="/questions"
                   className={`nav-link ${
@@ -257,15 +257,19 @@ const Navbar: React.FC = () => {
         {isMenuOpen && (
           <div className="mobile-nav">
             <div className="mobile-nav-content">
-              <Link
-                to="/subscription"
-                className={`mobile-nav-link ${
-                  isActivePage("/subscription") ? "active" : ""
-                }`}
-                onClick={closeMenu}
-              >
-                Plans
-              </Link>
+              {isAuthenticated && (
+                <>
+                  <Link
+                    to="/subscription"
+                    className={`mobile-nav-link ${
+                      isActivePage("/subscription") ? "active" : ""
+                    }`}
+                    onClick={closeMenu}
+                  >
+                    Plans
+                  </Link>
+                </>
+              )}
               {/* Add other mobile nav links with similar styling */}
             </div>
           </div>

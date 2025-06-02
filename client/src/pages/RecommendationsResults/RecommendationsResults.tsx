@@ -1,4 +1,4 @@
-// Updated RecommendationsResults.tsx with better error handling
+// Updated RecommendationsResults.tsx with PrimeReact components and improved layout
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -18,6 +18,14 @@ import {
   AlertCircle,
   Loader2,
 } from "lucide-react";
+import { Button } from "primereact/button";
+import { Card } from "primereact/card";
+import { Badge } from "primereact/badge";
+import { Chip } from "primereact/chip";
+import { Message } from "primereact/message";
+import { ProgressSpinner } from "primereact/progressspinner";
+import { Ripple } from "primereact/ripple";
+import { Divider } from "primereact/divider";
 import { useRecommendations } from "../../context/RecommendationContext";
 import { useAuth } from "../../context/AuthContext";
 import { useSavedItems } from "../../context/SavedItemsContext";
@@ -78,7 +86,7 @@ const RecommendationsResults: React.FC = () => {
   // Save handler with real backend integration
   const handleSaveItem = async (
     item: MovieRecommendation | BookRecommendation,
-    type: "movie" | "book"
+    type: "movie" | "book",
   ) => {
     if (!isAuthenticated) {
       navigate("/signin");
@@ -99,7 +107,7 @@ const RecommendationsResults: React.FC = () => {
     } catch (error) {
       console.error(
         `Failed to ${isItemSaved(item.id) ? "unsave" : "save"} item:`,
-        error
+        error,
       );
     } finally {
       setIsProcessingSave(null);
@@ -108,7 +116,7 @@ const RecommendationsResults: React.FC = () => {
 
   const handleShare = async (
     item: MovieRecommendation | BookRecommendation,
-    type: "movie" | "book"
+    type: "movie" | "book",
   ) => {
     const shareData = {
       title: `Check out this ${type} recommendation: ${item.title}`,
@@ -164,18 +172,22 @@ const RecommendationsResults: React.FC = () => {
         </div>
 
         <div className="container">
-          <div className="loading-card glass">
+          <Card className="loading-card glass p-ripple">
             <div className="loading-content">
               <div className="loading-icon">
-                <Sparkles className="sparkle-icon" />
-                <Loader2 className="loader-icon" />
+                <Sparkles size={48} className="sparkle-icon" />
+                <ProgressSpinner
+                  style={{ width: "50px", height: "50px" }}
+                  strokeWidth="4"
+                />
               </div>
               <h2 className="loading-title">Loading Your Recommendations</h2>
               <p className="loading-description">
                 Preparing your personalized suggestions...
               </p>
             </div>
-          </div>
+            <Ripple />
+          </Card>
         </div>
       </div>
     );
@@ -192,7 +204,7 @@ const RecommendationsResults: React.FC = () => {
           </div>
         </div>
         <div className="container">
-          <div className="error-card glass">
+          <Card className="error-card glass p-ripple">
             <AlertCircle
               size={48}
               style={{ color: "#ef4444", marginBottom: "1.5rem" }}
@@ -200,18 +212,23 @@ const RecommendationsResults: React.FC = () => {
             <h2 className="error-title">Something went wrong</h2>
             <p className="error-message">{error}</p>
             <div className="error-actions">
-              <button
+              <Button
                 onClick={() => navigate("/questions")}
-                className="btn-primary"
-              >
-                <RotateCcw size={20} />
-                Try Again
-              </button>
-              <button onClick={() => navigate("/")} className="btn-glass">
-                Go Home
-              </button>
+                label="Try Again"
+                icon="pi pi-refresh"
+                className="p-button-success"
+                raised
+              />
+              <Button
+                onClick={() => navigate("/")}
+                label="Go Home"
+                icon="pi pi-home"
+                className="p-button-outlined"
+                raised
+              />
             </div>
-          </div>
+            <Ripple />
+          </Card>
         </div>
       </div>
     );
@@ -228,23 +245,20 @@ const RecommendationsResults: React.FC = () => {
           </div>
         </div>
         <div className="container">
-          <div className="empty-card glass">
-            <Sparkles
-              size={48}
-              style={{ color: "var(--primary-500)", marginBottom: "1.5rem" }}
-            />
+          <Card className="empty-card glass p-ripple">
             <h2 className="empty-title">No recommendations found</h2>
             <p className="empty-message">
               Let's get you some personalized suggestions!
             </p>
-            <button
+            <Button
               onClick={() => navigate("/questions")}
-              className="btn-primary"
-            >
-              <Sparkles size={20} />
-              Get Recommendations
-            </button>
-          </div>
+              label="Get Recommendations"
+              icon="pi pi-sparkles"
+              className="p-button-success"
+              raised
+            />
+            <Ripple />
+          </Card>
         </div>
       </div>
     );
@@ -270,47 +284,50 @@ const RecommendationsResults: React.FC = () => {
         <div className="results-container">
           {/* Header */}
           <div className="results-header">
-            <div className="header-content glass">
-              <div className="header-icon">
-                <Sparkles size={32} />
+            <Card className="header-content glass">
+              <div className="header-layout">
+                <div className="header-text-center">
+                  <h1 className="results-title">
+                    Your Personalized Recommendations
+                  </h1>
+                  <p className="results-subtitle">
+                    Based on your preferences, here are{" "}
+                    <Badge value={totalRecommendations} className="ml-1" />{" "}
+                    carefully selected suggestions
+                  </p>
+                  <Button
+                    onClick={handleStartOver}
+                    label="Start Over"
+                    icon="pi pi-refresh"
+                    className="p-button-outlined start-over-btn p-ripple"
+                    raised
+                  >
+                    <Ripple />
+                  </Button>
+                </div>
               </div>
-              <div className="header-text">
-                <h1 className="results-title">
-                  Your Personalized Recommendations
-                </h1>
-                <p className="results-subtitle">
-                  Based on your preferences, here are{" "}
-                  {totalRecommendations > 0 ? totalRecommendations : "some"}{" "}
-                  carefully selected suggestions
-                </p>
-              </div>
-              <button
-                onClick={handleStartOver}
-                className="btn-glass start-over-btn"
-              >
-                <RotateCcw size={20} />
-                Start Over
-              </button>
-            </div>
+            </Card>
           </div>
 
           {/* Save Error Display */}
           {saveError && (
-            <div className="error-banner" style={{ marginBottom: "2rem" }}>
-              <AlertCircle size={20} />
-              <span>Save Error: {saveError}</span>
-              <button onClick={clearSaveError} className="error-close">
-                ×
-              </button>
-            </div>
+            <Message
+              severity="error"
+              text={`Save Error: ${saveError}`}
+              style={{ marginBottom: "2rem" }}
+              onRemove={clearSaveError}
+            />
           )}
 
           {/* Show message if no recommendations */}
           {!hasMovies && !hasBooks && (
-            <div className="empty-card glass" style={{ marginBottom: "2rem" }}>
+            <Card
+              className="empty-card glass p-ripple"
+              style={{ marginBottom: "2rem" }}
+            >
               <AlertCircle
                 size={48}
-                style={{ color: "var(--primary-500)", marginBottom: "1.5rem" }}
+                style={{ color: "#00955f", marginBottom: "1.5rem" }}
               />
               <h2 className="empty-title">No recommendations generated</h2>
               <p className="empty-message">
@@ -319,11 +336,15 @@ const RecommendationsResults: React.FC = () => {
                 or we may be using fallback recommendations. Try answering the
                 questions differently for better results.
               </p>
-              <button onClick={handleStartOver} className="btn-primary">
-                <RotateCcw size={20} />
-                Try Different Answers
-              </button>
-            </div>
+              <Button
+                onClick={handleStartOver}
+                label="Try Different Answers"
+                icon="pi pi-refresh"
+                className="p-button-success"
+                raised
+              />
+              <Ripple />
+            </Card>
           )}
 
           {/* Movies Section */}
@@ -334,16 +355,17 @@ const RecommendationsResults: React.FC = () => {
                   <Film size={24} />
                 </div>
                 <h2 className="section-title">Movie Recommendations</h2>
-                <span className="section-count">
-                  {recommendations.movies!.length} movies
-                </span>
+                <Badge
+                  value={`${recommendations.movies!.length} movies`}
+                  className="section-badge"
+                />
               </div>
 
               <div className="recommendations-grid">
                 {recommendations.movies!.map((movie, index) => (
-                  <div
+                  <Card
                     key={movie.id}
-                    className="recommendation-card glass"
+                    className="recommendation-card glass p-ripple"
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
                     <div className="card-header">
@@ -364,31 +386,39 @@ const RecommendationsResults: React.FC = () => {
                         </div>
                       )}
                       <div className="card-actions">
-                        <button
+                        <Button
                           onClick={() => handleSaveItem(movie, "movie")}
-                          className={`action-btn ${
+                          className={`action-btn p-ripple ${
                             isItemSaved(movie.id) ? "saved" : ""
                           }`}
                           disabled={isProcessingSave === movie.id}
-                          title={
+                          tooltip={
                             isItemSaved(movie.id)
                               ? "Remove from saved"
                               : "Save for later"
                           }
+                          icon={
+                            isProcessingSave === movie.id
+                              ? "pi pi-spin pi-spinner"
+                              : "pi pi-heart"
+                          }
+                          rounded
+                          text
+                          raised
                         >
-                          {isProcessingSave === movie.id ? (
-                            <Loader2 size={20} className="loading-spinner" />
-                          ) : (
-                            <Heart size={20} />
-                          )}
-                        </button>
-                        <button
+                          <Ripple />
+                        </Button>
+                        <Button
                           onClick={() => handleShare(movie, "movie")}
-                          className="action-btn"
-                          title="Share this recommendation"
+                          className="action-btn p-ripple"
+                          tooltip="Share this recommendation"
+                          icon="pi pi-share-alt"
+                          rounded
+                          text
+                          raised
                         >
-                          <Share2 size={20} />
-                        </button>
+                          <Ripple />
+                        </Button>
                       </div>
                     </div>
 
@@ -417,18 +447,21 @@ const RecommendationsResults: React.FC = () => {
                           </div>
                         )}
                         {movie.age_rating && (
-                          <div className="meta-item age-rating">
-                            <span>{movie.age_rating}</span>
-                          </div>
+                          <Chip
+                            label={movie.age_rating}
+                            className="age-rating-chip"
+                          />
                         )}
                       </div>
 
                       {movie.genres && movie.genres.length > 0 && (
                         <div className="item-genres">
                           {movie.genres.slice(0, 3).map((genre) => (
-                            <span key={genre} className="genre-tag">
-                              {genre}
-                            </span>
+                            <Chip
+                              key={genre}
+                              label={genre}
+                              className="genre-chip"
+                            />
                           ))}
                         </div>
                       )}
@@ -437,54 +470,26 @@ const RecommendationsResults: React.FC = () => {
                         <p className="item-description">{movie.description}</p>
                       )}
 
+                      <Divider />
+
                       <div className="card-footer">
-                        <button className="btn-primary view-details-btn">
-                          <ExternalLink size={16} />
-                          View Details
-                        </button>
+                        <Button
+                          label="View Details"
+                          icon="pi pi-external-link"
+                          className="p-button-success view-details-btn p-ripple"
+                          size="small"
+                          outlined
+                        >
+                          <Ripple />
+                        </Button>
                       </div>
                     </div>
-                  </div>
+                    <Ripple />
+                  </Card>
                 ))}
               </div>
             </section>
           )}
-
-          {/* Footer Actions */}
-          <div className="results-footer">
-            <div className="footer-content glass">
-              <div className="footer-text">
-                <h3>Love these recommendations?</h3>
-                <p>
-                  Save your favorites and get more personalized suggestions by
-                  answering different questions or exploring new categories.
-                </p>
-              </div>
-              <div className="footer-actions">
-                <button onClick={handleStartOver} className="btn-outline">
-                  <RotateCcw size={20} />
-                  Try Different Questions
-                </button>
-                {!isAuthenticated ? (
-                  <button
-                    onClick={() => navigate("/signup")}
-                    className="btn-primary"
-                  >
-                    <Sparkles size={20} />
-                    Sign Up for More
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => navigate("/account?tab=history")}
-                    className="btn-primary"
-                  >
-                    <Heart size={20} />
-                    View Saved Items
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
 
           {/* Books Section */}
           {hasBooks && (
@@ -494,16 +499,17 @@ const RecommendationsResults: React.FC = () => {
                   <Book size={24} />
                 </div>
                 <h2 className="section-title">Book Recommendations</h2>
-                <span className="section-count">
-                  {recommendations.books!.length} books
-                </span>
+                <Badge
+                  value={`${recommendations.books!.length} books`}
+                  className="section-badge"
+                />
               </div>
 
               <div className="recommendations-grid">
                 {recommendations.books!.map((book, index) => (
-                  <div
+                  <Card
                     key={book.id}
-                    className="recommendation-card glass"
+                    className="recommendation-card glass p-ripple"
                     style={{
                       animationDelay: `${
                         (hasMovies ? recommendations.movies!.length : 0) +
@@ -529,31 +535,39 @@ const RecommendationsResults: React.FC = () => {
                         </div>
                       )}
                       <div className="card-actions">
-                        <button
+                        <Button
                           onClick={() => handleSaveItem(book, "book")}
-                          className={`action-btn ${
+                          className={`action-btn p-ripple ${
                             isItemSaved(book.id) ? "saved" : ""
                           }`}
                           disabled={isProcessingSave === book.id}
-                          title={
+                          tooltip={
                             isItemSaved(book.id)
                               ? "Remove from saved"
                               : "Save for later"
                           }
+                          icon={
+                            isProcessingSave === book.id
+                              ? "pi pi-spin pi-spinner"
+                              : "pi pi-heart"
+                          }
+                          rounded
+                          text
+                          raised
                         >
-                          {isProcessingSave === book.id ? (
-                            <Loader2 size={20} className="loading-spinner" />
-                          ) : (
-                            <Heart size={20} />
-                          )}
-                        </button>
-                        <button
+                          <Ripple />
+                        </Button>
+                        <Button
                           onClick={() => handleShare(book, "book")}
-                          className="action-btn"
-                          title="Share this recommendation"
+                          className="action-btn p-ripple"
+                          tooltip="Share this recommendation"
+                          icon="pi pi-share-alt"
+                          rounded
+                          text
+                          raised
                         >
-                          <Share2 size={20} />
-                        </button>
+                          <Ripple />
+                        </Button>
                       </div>
                     </div>
 
@@ -589,18 +603,21 @@ const RecommendationsResults: React.FC = () => {
                           </div>
                         )}
                         {book.age_rating && (
-                          <div className="meta-item age-rating">
-                            <span>{book.age_rating}</span>
-                          </div>
+                          <Chip
+                            label={book.age_rating}
+                            className="age-rating-chip"
+                          />
                         )}
                       </div>
 
                       {book.genres && book.genres.length > 0 && (
                         <div className="item-genres">
                           {book.genres.slice(0, 3).map((genre) => (
-                            <span key={genre} className="genre-tag">
-                              {genre}
-                            </span>
+                            <Chip
+                              key={genre}
+                              label={genre}
+                              className="genre-chip"
+                            />
                           ))}
                         </div>
                       )}
@@ -609,18 +626,73 @@ const RecommendationsResults: React.FC = () => {
                         <p className="item-description">{book.description}</p>
                       )}
 
+                      <Divider />
+
                       <div className="card-footer">
-                        <button className="btn-primary view-details-btn">
-                          <ExternalLink size={16} />
-                          View Details
-                        </button>
+                        <Button
+                          label="View Details"
+                          icon="pi pi-external-link"
+                          className="p-button-success view-details-btn p-ripple"
+                          size="small"
+                          outlined
+                        >
+                          <Ripple />
+                        </Button>
                       </div>
                     </div>
-                  </div>
+                    <Ripple />
+                  </Card>
                 ))}
               </div>
             </section>
           )}
+
+          {/* Footer Actions */}
+          <div className="results-footer">
+            <Card className="footer-content glass">
+              <div className="footer-layout">
+                <div className="footer-text">
+                  <h3>Love these recommendations?</h3>
+                  <p>
+                    Save your favorites and get more personalized suggestions by
+                    answering different questions or exploring new categories.
+                  </p>
+                </div>
+                <div className="footer-actions">
+                  <Button
+                    onClick={handleStartOver}
+                    label="Try Different Questions"
+                    icon="pi pi-refresh"
+                    className="p-button-outlined p-ripple"
+                    raised
+                  >
+                    <Ripple />
+                  </Button>
+                  {!isAuthenticated ? (
+                    <Button
+                      onClick={() => navigate("/signup")}
+                      label="Sign Up for More"
+                      icon="pi pi-user-plus"
+                      className="p-button-success p-ripple"
+                      raised
+                    >
+                      <Ripple />
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => navigate("/account?tab=history")}
+                      label="View Saved Items"
+                      icon="pi pi-heart"
+                      className="p-button-success p-ripple"
+                      raised
+                    >
+                      <Ripple />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

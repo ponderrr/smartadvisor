@@ -67,7 +67,7 @@ class OpenAIService:
             if needs:
                 accessibility_context = f" User preferences: {', '.join(needs)}."
 
-        system_prompt = "You are an expert recommendation assistant. Generate thoughtful, specific questions to understand user preferences. Always return valid JSON arrays with no additional text."
+        system_prompt = "You are an expert recommendation assistant. Generate thoughtful, specific questions to understand user preferences. Always return valid JSON."
 
         user_prompt = f"""Generate exactly {num_questions} personalized questions to help recommend {type_text}.{age_context}{accessibility_context}
 
@@ -77,13 +77,15 @@ Requirements:
 - Be age-appropriate and engaging
 - Help understand user's taste and preferences
 
-Return ONLY a JSON array in this exact format:
-[
-    {{"text": "What genres do you enjoy most?", "order": 1}},
-    {{"text": "Do you prefer recent releases or classics?", "order": 2}}
-]
+Return ONLY a JSON object with a "questions" array in this exact format:
+{{
+    "questions": [
+        {{"text": "What genres do you enjoy most?", "order": 1}},
+        {{"text": "Do you prefer recent releases or classics?", "order": 2}}
+    ]
+}}
 
-Generate exactly {num_questions} questions. No additional text."""
+Generate exactly {num_questions} questions. No additional text or explanation."""
 
         try:
             logger.info("🔄 Making OpenAI API request for questions...")
@@ -106,16 +108,24 @@ Generate exactly {num_questions} questions. No additional text."""
 
             # Parse JSON response
             try:
-                # Sometimes OpenAI wraps the array in an object, handle both cases
                 parsed = json.loads(content)
+                logger.info(f"📝 Parsed response type: {type(parsed)}")
+                logger.info(f"📝 Parsed response keys: {list(parsed.keys()) if isinstance(parsed, dict) else 'Not a dict'}")
+
+                # Handle the response - expect {"questions": [...]}
                 if isinstance(parsed, dict) and "questions" in parsed:
                     questions = parsed["questions"]
+                    logger.info(f"✅ Found questions array with {len(questions)} items")
                 elif isinstance(parsed, list):
+                    # If it's already a list, use it directly
                     questions = parsed
+                    logger.info(f"✅ Using direct list with {len(questions)} items")
                 else:
+                    logger.error(f"❌ Unexpected response format. Type: {type(parsed)}, Content: {parsed}")
                     raise ValueError(f"Unexpected response format: {type(parsed)}")
 
                 if not isinstance(questions, list):
+                    logger.error(f"❌ Questions is not a list: {type(questions)}")
                     raise ValueError("Questions is not a list")
 
                 if len(questions) != num_questions:
@@ -126,11 +136,13 @@ Generate exactly {num_questions} questions. No additional text."""
                 # Validate question format
                 for i, q in enumerate(questions):
                     if not isinstance(q, dict) or "text" not in q:
+                        logger.error(f"❌ Invalid question format at index {i}: {q}")
                         raise ValueError(f"Invalid question format at index {i}: {q}")
                     if "order" not in q:
                         q["order"] = i + 1
+                        logger.info(f"🔧 Added order {i + 1} to question: {q['text'][:50]}...")
 
-                logger.info(f"✅ Successfully parsed {len(questions)} questions")
+                logger.info(f"✅ Successfully parsed and validated {len(questions)} questions")
                 return questions
 
             except json.JSONDecodeError as e:
@@ -205,7 +217,7 @@ Return ONLY JSON in this exact format:
     ],
     "books": [
         {{
-            "title": "Actual Book Title", 
+            "title": "Actual Book Title",
             "author": "Author Name",
             "description": "Detailed description of the book and its appeal.",
             "why_recommended": "Specific reason why this matches their preferences",
