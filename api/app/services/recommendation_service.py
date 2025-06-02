@@ -45,7 +45,7 @@ class RecommendationService:
     ) -> Recommendation:
         """Generate questions for a recommendation session."""
         logger.info(f"🎯 Starting question generation for user {user.id}: {num_questions} {recommendation_type.value} questions")
-        
+
         try:
             user_preferences = await self.get_user_preferences(db, user)
 
@@ -118,7 +118,7 @@ class RecommendationService:
     ) -> Recommendation:
         """Process user answers and generate recommendations."""
         logger.info(f"🔄 Processing {len(answers)} answers for recommendation {recommendation.id}")
-        
+
         try:
             # Save answers to database
             for answer in answers:
@@ -180,9 +180,10 @@ class RecommendationService:
             )
 
             if not ai_recommendations:
+                logger.error("❌ OpenAI returned no recommendations")
                 raise Exception("OpenAI returned no recommendations")
 
-            logger.info(f"✅ OpenAI returned recommendations: {ai_recommendations.keys()}")
+            logger.info(f"✅ OpenAI returned recommendations: {list(ai_recommendations.keys())}")
 
             # Process movie recommendations
             movies_processed = 0
@@ -191,12 +192,17 @@ class RecommendationService:
                 for i, movie_data in enumerate(ai_recommendations["movies"]):
                     try:
                         logger.info(f"Processing movie {i+1}: {movie_data.get('title', 'Unknown')}")
-                        
+
+                        # Validate required fields
+                        if not movie_data.get("title"):
+                            logger.warning(f"❌ Movie {i+1} missing title, skipping")
+                            continue
+
                         # Start with basic data from OpenAI
                         movie_rec_data = {
-                            "title": movie_data.get("title", "Unknown Movie"),
-                            "description": movie_data.get("description", ""),
-                            "age_rating": movie_data.get("age_rating"),
+                            "title": str(movie_data.get("title", "Unknown Movie")),
+                            "description": str(movie_data.get("description", "")),
+                            "age_rating": str(movie_data.get("age_rating", "")) if movie_data.get("age_rating") else None,
                             "rating": None,
                             "poster_path": None,
                             "tmdb_id": None,
@@ -204,19 +210,38 @@ class RecommendationService:
                             "runtime": None,
                         }
 
+                        # Try to parse rating as float
+                        try:
+                            if movie_data.get("rating"):
+                                movie_rec_data["rating"] = float(movie_data["rating"])
+                        except (ValueError, TypeError):
+                            logger.warning(f"Could not parse rating for movie {movie_data.get('title')}")
+
                         # Try to enrich with TMDB data (non-blocking)
                         try:
                             enriched_movie = await tmdb_service.enrich_movie_data(movie_data)
                             if enriched_movie:
-                                movie_rec_data.update({
-                                    "title": enriched_movie.get("title", movie_rec_data["title"]),
-                                    "description": enriched_movie.get("description") or movie_rec_data["description"],
-                                    "rating": enriched_movie.get("rating"),
-                                    "poster_path": enriched_movie.get("poster_path"),
-                                    "tmdb_id": enriched_movie.get("tmdb_id"),
-                                    "release_date": enriched_movie.get("release_date") or movie_rec_data["release_date"],
-                                    "runtime": enriched_movie.get("runtime"),
-                                })
+                                # Only update if we got valid data
+                                if enriched_movie.get("title"):
+                                    movie_rec_data["title"] = str(enriched_movie["title"])
+                                if enriched_movie.get("description"):
+                                    movie_rec_data["description"] = str(enriched_movie["description"])
+                                if enriched_movie.get("rating") is not None:
+                                    try:
+                                        movie_rec_data["rating"] = float(enriched_movie["rating"])
+                                    except (ValueError, TypeError):
+                                        pass
+                                if enriched_movie.get("poster_path"):
+                                    movie_rec_data["poster_path"] = str(enriched_movie["poster_path"])
+                                if enriched_movie.get("tmdb_id"):
+                                    movie_rec_data["tmdb_id"] = str(enriched_movie["tmdb_id"])
+                                if enriched_movie.get("release_date"):
+                                    movie_rec_data["release_date"] = str(enriched_movie["release_date"])
+                                if enriched_movie.get("runtime") is not None:
+                                    try:
+                                        movie_rec_data["runtime"] = int(enriched_movie["runtime"])
+                                    except (ValueError, TypeError):
+                                        pass
                                 logger.info(f"🎬 Enriched movie data for: {movie_rec_data['title']}")
                         except Exception as tmdb_error:
                             logger.warning(f"TMDB enrichment failed for {movie_data.get('title')}: {tmdb_error}")
@@ -230,7 +255,7 @@ class RecommendationService:
                         db.add(movie_rec)
                         movies_processed += 1
                         logger.info(f"✅ Added movie #{movies_processed}: {movie_rec_data['title']}")
-                        
+
                     except Exception as e:
                         logger.error(f"❌ Error processing movie {i+1} ({movie_data.get('title', 'Unknown')}): {e}")
                         continue
@@ -242,13 +267,18 @@ class RecommendationService:
                 for i, book_data in enumerate(ai_recommendations["books"]):
                     try:
                         logger.info(f"Processing book {i+1}: {book_data.get('title', 'Unknown')}")
-                        
+
+                        # Validate required fields
+                        if not book_data.get("title"):
+                            logger.warning(f"❌ Book {i+1} missing title, skipping")
+                            continue
+
                         # Start with basic data from OpenAI
                         book_rec_data = {
-                            "title": book_data.get("title", "Unknown Book"),
-                            "author": book_data.get("author", "Unknown Author"),
-                            "description": book_data.get("description", ""),
-                            "age_rating": book_data.get("age_rating"),
+                            "title": str(book_data.get("title", "Unknown Book")),
+                            "author": str(book_data.get("author", "Unknown Author")),
+                            "description": str(book_data.get("description", "")),
+                            "age_rating": str(book_data.get("age_rating", "")) if book_data.get("age_rating") else None,
                             "rating": None,
                             "poster_path": None,
                             "isbn": None,
@@ -257,21 +287,42 @@ class RecommendationService:
                             "publisher": None,
                         }
 
+                        # Try to parse rating as float
+                        try:
+                            if book_data.get("rating"):
+                                book_rec_data["rating"] = float(book_data["rating"])
+                        except (ValueError, TypeError):
+                            logger.warning(f"Could not parse rating for book {book_data.get('title')}")
+
                         # Try to enrich with Google Books data (non-blocking)
                         try:
                             enriched_book = await books_service.enrich_book_data(book_data)
                             if enriched_book:
-                                book_rec_data.update({
-                                    "title": enriched_book.get("title", book_rec_data["title"]),
-                                    "author": enriched_book.get("author", book_rec_data["author"]),
-                                    "description": enriched_book.get("description") or book_rec_data["description"],
-                                    "rating": enriched_book.get("rating"),
-                                    "poster_path": enriched_book.get("poster_path"),
-                                    "isbn": enriched_book.get("isbn"),
-                                    "published_date": enriched_book.get("published_date"),
-                                    "page_count": enriched_book.get("page_count"),
-                                    "publisher": enriched_book.get("publisher"),
-                                })
+                                # Only update if we got valid data
+                                if enriched_book.get("title"):
+                                    book_rec_data["title"] = str(enriched_book["title"])
+                                if enriched_book.get("author"):
+                                    book_rec_data["author"] = str(enriched_book["author"])
+                                if enriched_book.get("description"):
+                                    book_rec_data["description"] = str(enriched_book["description"])
+                                if enriched_book.get("rating") is not None:
+                                    try:
+                                        book_rec_data["rating"] = float(enriched_book["rating"])
+                                    except (ValueError, TypeError):
+                                        pass
+                                if enriched_book.get("poster_path"):
+                                    book_rec_data["poster_path"] = str(enriched_book["poster_path"])
+                                if enriched_book.get("isbn"):
+                                    book_rec_data["isbn"] = str(enriched_book["isbn"])
+                                if enriched_book.get("published_date"):
+                                    book_rec_data["published_date"] = str(enriched_book["published_date"])
+                                if enriched_book.get("page_count") is not None:
+                                    try:
+                                        book_rec_data["page_count"] = int(enriched_book["page_count"])
+                                    except (ValueError, TypeError):
+                                        pass
+                                if enriched_book.get("publisher"):
+                                    book_rec_data["publisher"] = str(enriched_book["publisher"])
                                 logger.info(f"📚 Enriched book data for: {book_rec_data['title']}")
                         except Exception as books_error:
                             logger.warning(f"Google Books enrichment failed for {book_data.get('title')}: {books_error}")
@@ -285,15 +336,18 @@ class RecommendationService:
                         db.add(book_rec)
                         books_processed += 1
                         logger.info(f"✅ Added book #{books_processed}: {book_rec_data['title']}")
-                        
+
                     except Exception as e:
                         logger.error(f"❌ Error processing book {i+1} ({book_data.get('title', 'Unknown')}): {e}")
                         continue
 
             # Check if we actually processed any recommendations
             total_processed = movies_processed + books_processed
+            logger.info(f"📊 Total recommendations processed: {total_processed} ({movies_processed} movies, {books_processed} books)")
+
             if total_processed == 0:
-                raise Exception("No recommendations were successfully processed")
+                logger.error("❌ No recommendations were successfully processed")
+                raise Exception("OpenAI failed to generate valid recommendations. Please try again with different answers or check your internet connection.")
 
             # Commit all changes
             await db.commit()
@@ -319,6 +373,7 @@ class RecommendationService:
             logger.info(f"🎉 Processing complete! Final counts: {final_movie_count} movies, {final_book_count} books")
 
             if final_movie_count == 0 and final_book_count == 0:
+                logger.error("❌ No recommendations were saved to the database after commit")
                 raise Exception("No recommendations were saved to the database")
 
             return recommendation

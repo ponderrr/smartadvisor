@@ -85,12 +85,52 @@
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     animation: slideUp 0.6s ease-out both;
     box-shadow: 0 4px 20px rgba(31, 38, 135, 0.1) !important;
+    overflow: hidden;
 }
 
 [data-theme="dark"] .plan-card.p-card {
     background: rgba(255, 255, 255, 0.05) !important;
     border-color: rgba(255, 255, 255, 0.1) !important;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2) !important;
+}
+
+.plan-card.p-card::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: radial-gradient(circle, rgba(0, 149, 95, 0.2) 0%, transparent 50%);
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    transition: width 0.6s ease-out, height 0.6s ease-out;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.plan-card.p-card:hover::before {
+    width: 300%;
+    height: 300%;
+}
+
+.plan-card.p-card::after {
+    content: '';
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    top: 50%;
+    left: 50%;
+    background: radial-gradient(circle, rgba(0, 149, 95, 0.4) 0%, transparent 60%);
+    border-radius: 50%;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.plan-card.p-card:active::after {
+    animation: cardRipple 0.8s ease-out;
 }
 
 .plan-card.p-card:hover {
@@ -135,6 +175,8 @@
 .plan-card .p-card-body {
     padding: var(--space-8) !important;
     background: transparent !important;
+    position: relative;
+    z-index: 1;
 }
 
 .plan-card .p-card-content {
@@ -532,6 +574,17 @@
 }
 
 /* Animation Keyframes */
+@keyframes cardRipple {
+    0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0.8;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(4);
+        opacity: 0;
+    }
+}
+
 @keyframes slideUp {
     from {
         opacity: 0;

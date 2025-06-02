@@ -157,11 +157,14 @@ const QuestionsPage: React.FC = () => {
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // Get subscription info with fallbacks
-  const maxQuestions = getMaxQuestions();
-  const minQuestions = getMinQuestions();
+  // Get subscription info with proper fallbacks to prevent NaN
+  const maxQuestions = getMaxQuestions() || 5;
+  const minQuestions = getMinQuestions() || 3;
   const isLimited = isFeatureLimited();
-  const planName = currentSubscription?.name || "Free Plan";
+  const planName =
+    currentSubscription?.tier === "free"
+      ? "Free Plan"
+      : currentSubscription?.tier || "Free Plan";
 
   // Get appropriate tips based on selected type
   const getTipsArray = () => {
@@ -204,7 +207,7 @@ const QuestionsPage: React.FC = () => {
 
   // Set default question count based on limits - only update when limits change
   useEffect(() => {
-    if (isInitialized) {
+    if (isInitialized && maxQuestions > 0) {
       const defaultCount = Math.min(5, maxQuestions);
       setSelectedQuestionCount(defaultCount);
     }
@@ -743,10 +746,6 @@ const QuestionsPage: React.FC = () => {
         <div className="container">
           <div className="loading-card glass">
             <div className="loading-content">
-              <div className="loading-icon">
-                <Sparkles className="sparkle-icon" />
-                <Loader2 className="loader-icon" />
-              </div>
               <h2 className="loading-title">Generating Your Questions</h2>
               <p className="loading-description">
                 Our AI is creating {selectedQuestionCount} personalized
