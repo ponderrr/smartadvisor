@@ -1,3 +1,6 @@
+# api/app/services/openai_service.py - DEBUG VERSION
+# Replace your openai_service.py with this temporarily to see what's happening
+
 from typing import List, Dict, Any
 from openai import AsyncOpenAI
 from app.core.config import settings
@@ -11,20 +14,16 @@ logger = logging.getLogger(__name__)
 class OpenAIService:
     def __init__(self):
         if not settings.OPENAI_API_KEY:
-            raise ValueError(
-                "OPENAI_API_KEY is required for AI recommendations. Please set it in your .env file."
-            )
+            raise ValueError("OPENAI_API_KEY is required for AI recommendations.")
 
         if not settings.validate_openai_key():
-            raise ValueError(
-                f"Invalid OPENAI_API_KEY format. Key should start with 'sk-' or 'sk-proj-'. Got: {settings.OPENAI_API_KEY[:10]}..."
-            )
+            raise ValueError(f"Invalid OPENAI_API_KEY format.")
 
         try:
             self.client = AsyncOpenAI(
                 api_key=settings.OPENAI_API_KEY,
-                timeout=60.0,  # Increased timeout
-                max_retries=3,  # More retries
+                timeout=60.0,
+                max_retries=3,
             )
             logger.info("✅ OpenAI service initialized successfully")
         except Exception as e:
@@ -40,9 +39,7 @@ class OpenAIService:
     ) -> List[Dict[str, Any]]:
         """Generate personalized questions for recommendations."""
 
-        logger.info(
-            f"🤖 Generating {num_questions} questions for {recommendation_type.value}"
-        )
+        logger.info(f"🤖 Generating {num_questions} questions for {recommendation_type.value}")
 
         type_text = {
             RecommendationType.MOVIE: "movies",
@@ -50,34 +47,11 @@ class OpenAIService:
             RecommendationType.BOTH: "movies and books",
         }[recommendation_type]
 
-        age_context = f" The user is {user_age} years old." if user_age else ""
+        system_prompt = "You are an expert recommendation assistant. Generate thoughtful questions. Always return valid JSON."
 
-        accessibility_context = ""
-        if accessibility_needs:
-            needs = []
-            if accessibility_needs.get("require_subtitles"):
-                needs.append("requires subtitles")
-            if accessibility_needs.get("require_audio_description"):
-                needs.append("requires audio descriptions")
-            if accessibility_needs.get("exclude_violent_content"):
-                needs.append("prefers non-violent content")
-            if accessibility_needs.get("exclude_sexual_content"):
-                needs.append("prefers content without sexual themes")
+        user_prompt = f"""Generate exactly {num_questions} personalized questions to help recommend {type_text}.
 
-            if needs:
-                accessibility_context = f" User preferences: {', '.join(needs)}."
-
-        system_prompt = "You are an expert recommendation assistant. Generate thoughtful, specific questions to understand user preferences. Always return valid JSON."
-
-        user_prompt = f"""Generate exactly {num_questions} personalized questions to help recommend {type_text}.{age_context}{accessibility_context}
-
-Requirements:
-- Questions should be specific and actionable for recommendations
-- Cover diverse aspects: genres, themes, mood, recent vs classic, format preferences
-- Be age-appropriate and engaging
-- Help understand user's taste and preferences
-
-Return ONLY a JSON object with a "questions" array in this exact format:
+Return ONLY a JSON object with a "questions" array:
 {{
     "questions": [
         {{"text": "What genres do you enjoy most?", "order": 1}},
@@ -85,11 +59,9 @@ Return ONLY a JSON object with a "questions" array in this exact format:
     ]
 }}
 
-Generate exactly {num_questions} questions. No additional text or explanation."""
+Generate exactly {num_questions} questions."""
 
         try:
-            logger.info("🔄 Making OpenAI API request for questions...")
-
             response = await self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
@@ -98,61 +70,31 @@ Generate exactly {num_questions} questions. No additional text or explanation.""
                 ],
                 max_tokens=1000,
                 temperature=0.7,
-                response_format={"type": "json_object"},  # Force JSON response
+                response_format={"type": "json_object"},
             )
 
             content = response.choices[0].message.content.strip()
-            logger.info(
-                f"✅ Received OpenAI response for questions: {len(content)} characters"
-            )
+            parsed = json.loads(content)
 
-            # Parse JSON response
-            try:
-                parsed = json.loads(content)
-                logger.info(f"📝 Parsed response type: {type(parsed)}")
-                logger.info(f"📝 Parsed response keys: {list(parsed.keys()) if isinstance(parsed, dict) else 'Not a dict'}")
+            if isinstance(parsed, dict) and "questions" in parsed:
+                questions = parsed["questions"]
+            elif isinstance(parsed, list):
+                questions = parsed
+            else:
+                raise ValueError("Invalid response format")
 
-                # Handle the response - expect {"questions": [...]}
-                if isinstance(parsed, dict) and "questions" in parsed:
-                    questions = parsed["questions"]
-                    logger.info(f"✅ Found questions array with {len(questions)} items")
-                elif isinstance(parsed, list):
-                    # If it's already a list, use it directly
-                    questions = parsed
-                    logger.info(f"✅ Using direct list with {len(questions)} items")
-                else:
-                    logger.error(f"❌ Unexpected response format. Type: {type(parsed)}, Content: {parsed}")
-                    raise ValueError(f"Unexpected response format: {type(parsed)}")
+            for i, q in enumerate(questions):
+                if not isinstance(q, dict) or "text" not in q:
+                    raise ValueError(f"Invalid question format: {q}")
+                if "order" not in q:
+                    q["order"] = i + 1
 
-                if not isinstance(questions, list):
-                    logger.error(f"❌ Questions is not a list: {type(questions)}")
-                    raise ValueError("Questions is not a list")
-
-                if len(questions) != num_questions:
-                    logger.warning(
-                        f"Expected {num_questions} questions, got {len(questions)}"
-                    )
-
-                # Validate question format
-                for i, q in enumerate(questions):
-                    if not isinstance(q, dict) or "text" not in q:
-                        logger.error(f"❌ Invalid question format at index {i}: {q}")
-                        raise ValueError(f"Invalid question format at index {i}: {q}")
-                    if "order" not in q:
-                        q["order"] = i + 1
-                        logger.info(f"🔧 Added order {i + 1} to question: {q['text'][:50]}...")
-
-                logger.info(f"✅ Successfully parsed and validated {len(questions)} questions")
-                return questions
-
-            except json.JSONDecodeError as e:
-                logger.error(f"❌ Failed to parse JSON response: {e}")
-                logger.error(f"Raw response: {content}")
-                raise Exception(f"OpenAI returned invalid JSON: {e}")
+            logger.info(f"✅ Generated {len(questions)} questions")
+            return questions
 
         except Exception as e:
-            logger.error(f"❌ Failed to generate questions: {e}")
-            raise Exception(f"Question generation failed: {str(e)}")
+            logger.error(f"❌ Question generation failed: {e}")
+            raise Exception(f"Failed to generate questions: {str(e)}")
 
     async def generate_recommendations(
         self,
@@ -161,76 +103,71 @@ Generate exactly {num_questions} questions. No additional text or explanation.""
         user_age: int = None,
         accessibility_needs: Dict = None,
     ) -> Dict[str, Any]:
-        """Generate recommendations based on user answers."""
+        """Generate recommendations - DEBUG VERSION to see what's happening."""
 
-        logger.info(f"🎯 Generating recommendations for {recommendation_type.value}")
+        logger.info(f"🎯 DEBUG: Starting recommendation generation for {recommendation_type.value}")
+        logger.info(f"🔍 DEBUG: Received {len(questions_and_answers)} Q&A pairs")
 
-        qa_text = "\n".join(
-            [f"Q: {qa['question']}\nA: {qa['answer']}" for qa in questions_and_answers]
-        )
+        # Log the Q&A pairs
+        for i, qa in enumerate(questions_and_answers):
+            logger.info(f"🔍 DEBUG Q{i+1}: {qa['question'][:50]}...")
+            logger.info(f"🔍 DEBUG A{i+1}: {qa['answer'][:50]}...")
 
-        age_context = f" User age: {user_age}." if user_age else ""
+        qa_text = "\n".join([f"Q: {qa['question']}\nA: {qa['answer']}" for qa in questions_and_answers])
 
-        accessibility_context = ""
-        if accessibility_needs:
-            context_parts = []
-            if accessibility_needs.get("exclude_violent_content"):
-                context_parts.append("exclude violent content")
-            if accessibility_needs.get("exclude_sexual_content"):
-                context_parts.append("exclude sexual content")
+        # Simple, direct prompt
+        if recommendation_type == RecommendationType.MOVIE:
+            target = "exactly 1 movie"
+        elif recommendation_type == RecommendationType.BOOK:
+            target = "exactly 1 book"
+        else:
+            target = "exactly 1 movie and exactly 1 book"
 
-            if context_parts:
-                accessibility_context = (
-                    f" Content restrictions: {', '.join(context_parts)}."
-                )
+        system_prompt = """You are a movie and book recommendation expert.
+You must recommend real, existing titles only.
+Always return valid JSON in the exact format requested."""
 
-        type_instructions = {
-            RecommendationType.MOVIE: "Recommend 5-7 movies",
-            RecommendationType.BOOK: "Recommend 5-7 books",
-            RecommendationType.BOTH: "Recommend 3-4 movies and 3-4 books",
-        }
+        user_prompt = f"""Based on these preferences, recommend {target}:
 
-        system_prompt = "You are an expert entertainment recommendation assistant. Provide personalized recommendations based on user preferences. Always return valid JSON with real, existing titles."
-
-        user_prompt = f"""{type_instructions[recommendation_type]} based on these user preferences:{age_context}{accessibility_context}
-
-User Responses:
 {qa_text}
 
 Requirements:
-- Recommend ONLY real, existing titles
-- Provide detailed descriptions (2-3 sentences each)
-- Explain why each recommendation matches their preferences
-- Include appropriate metadata (ratings, genres, etc.)
+- Only recommend real, existing titles
+- Provide specific reasons why each recommendation matches their answers
+- Include accurate information
 
-Return ONLY JSON in this exact format:
+Return JSON in this exact format:
 {{
     "movies": [
         {{
-            "title": "Actual Movie Title",
-            "description": "Detailed description of the movie and why it's good.",
-            "why_recommended": "Specific reason why this matches their preferences",
+            "title": "Real Movie Title",
+            "description": "Why this movie is good and matches their preferences",
             "age_rating": "PG-13",
-            "genres": ["Genre1", "Genre2"],
-            "year": 2023
+            "genres": ["Action", "Adventure"],
+            "year": 2020
         }}
     ],
     "books": [
         {{
-            "title": "Actual Book Title",
+            "title": "Real Book Title",
             "author": "Author Name",
-            "description": "Detailed description of the book and its appeal.",
-            "why_recommended": "Specific reason why this matches their preferences",
+            "description": "Why this book matches their preferences",
             "age_rating": "Adult",
-            "genres": ["Genre1", "Genre2"]
+            "genres": ["Fiction", "Adventure"]
         }}
     ]
 }}
 
-Include only the arrays for the requested type ({recommendation_type.value}). Ensure all titles are real and exist."""
+For movie request: include only "movies" array with 1 item
+For book request: include only "books" array with 1 item
+For both: include both arrays with 1 item each
+
+Recommend {target}."""
 
         try:
-            logger.info("🔄 Making OpenAI API request for recommendations...")
+            logger.info("🔄 DEBUG: Making OpenAI API request...")
+            logger.info(f"🔍 DEBUG: System prompt length: {len(system_prompt)}")
+            logger.info(f"🔍 DEBUG: User prompt length: {len(user_prompt)}")
 
             response = await self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
@@ -238,63 +175,69 @@ Include only the arrays for the requested type ({recommendation_type.value}). En
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                max_tokens=2000,
-                temperature=0.8,
-                response_format={"type": "json_object"},  # Force JSON response
+                max_tokens=1500,
+                temperature=0.7,
+                response_format={"type": "json_object"},
             )
 
             content = response.choices[0].message.content.strip()
-            logger.info(
-                f"✅ Received OpenAI response for recommendations: {len(content)} characters"
-            )
+
+            logger.info(f"🔍 DEBUG: OpenAI response length: {len(content)}")
+            logger.info(f"🔍 DEBUG: OpenAI raw response: {content}")
 
             try:
                 recommendations = json.loads(content)
 
+                logger.info(f"🔍 DEBUG: Parsed response type: {type(recommendations)}")
+                logger.info(f"🔍 DEBUG: Response keys: {list(recommendations.keys()) if isinstance(recommendations, dict) else 'Not a dict'}")
+
                 if not isinstance(recommendations, dict):
-                    raise ValueError(f"Expected dict, got {type(recommendations)}")
+                    logger.error(f"❌ DEBUG: Expected dict, got {type(recommendations)}")
+                    raise ValueError("Invalid response format")
 
-                # Validate the structure
-                if recommendation_type in [
-                    RecommendationType.MOVIE,
-                    RecommendationType.BOTH,
-                ]:
+                # Check structure
+                if recommendation_type in [RecommendationType.MOVIE, RecommendationType.BOTH]:
                     if "movies" not in recommendations:
+                        logger.warning("⚠️ DEBUG: No 'movies' key in response, adding empty array")
                         recommendations["movies"] = []
-                    elif not isinstance(recommendations["movies"], list):
-                        raise ValueError("movies must be a list")
+                    else:
+                        logger.info(f"🔍 DEBUG: Found movies array with {len(recommendations['movies'])} items")
+                        for i, movie in enumerate(recommendations["movies"]):
+                            logger.info(f"🔍 DEBUG: Movie {i+1}: {movie.get('title', 'No title')}")
 
-                if recommendation_type in [
-                    RecommendationType.BOOK,
-                    RecommendationType.BOTH,
-                ]:
+                if recommendation_type in [RecommendationType.BOOK, RecommendationType.BOTH]:
                     if "books" not in recommendations:
+                        logger.warning("⚠️ DEBUG: No 'books' key in response, adding empty array")
                         recommendations["books"] = []
-                    elif not isinstance(recommendations["books"], list):
-                        raise ValueError("books must be a list")
+                    else:
+                        logger.info(f"🔍 DEBUG: Found books array with {len(recommendations['books'])} items")
+                        for i, book in enumerate(recommendations["books"]):
+                            logger.info(f"🔍 DEBUG: Book {i+1}: {book.get('title', 'No title')} by {book.get('author', 'No author')}")
 
                 movies_count = len(recommendations.get("movies", []))
                 books_count = len(recommendations.get("books", []))
                 total_count = movies_count + books_count
 
-                if total_count == 0:
-                    raise Exception(
-                        "OpenAI returned no recommendations. This might be due to very restrictive preferences or an API issue."
-                    )
+                logger.info(f"📊 DEBUG: Final counts - Movies: {movies_count}, Books: {books_count}, Total: {total_count}")
 
-                logger.info(
-                    f"✅ Successfully generated {movies_count} movies and {books_count} books"
-                )
+                if total_count == 0:
+                    logger.error("❌ DEBUG: OpenAI returned zero recommendations!")
+                    logger.error(f"❌ DEBUG: This might be a prompt issue or OpenAI problem")
+                    raise Exception("OpenAI returned no recommendations")
+
+                logger.info(f"✅ DEBUG: Successfully generated {total_count} recommendations")
                 return recommendations
 
             except json.JSONDecodeError as e:
-                logger.error(f"❌ Failed to parse recommendations JSON: {e}")
-                logger.error(f"Raw response: {content}")
-                raise Exception(f"OpenAI returned invalid JSON: {e}")
+                logger.error(f"❌ DEBUG: JSON parsing failed: {e}")
+                logger.error(f"❌ DEBUG: Raw content that failed: {content}")
+                raise Exception("OpenAI returned invalid JSON")
 
         except Exception as e:
-            logger.error(f"❌ Failed to generate recommendations: {e}")
-            raise Exception(f"Recommendation generation failed: {str(e)}")
+            logger.error(f"❌ DEBUG: Recommendation generation failed: {e}")
+            import traceback
+            logger.error(f"❌ DEBUG: Full traceback: {traceback.format_exc()}")
+            raise Exception(f"Failed to generate recommendations: {str(e)}")
 
 
 openai_service = OpenAIService()
