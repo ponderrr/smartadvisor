@@ -13,7 +13,6 @@ import {
   Zap,
   Plus,
   Minus,
-  Lightbulb,
   Target,
   Clock,
   Heart,
